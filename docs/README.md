@@ -1,22 +1,21 @@
-# Campulse 文档导航
+# Campulse 文档
 
-当前基线：2026-10-10。按用途阅读，历史记录按发生日期解释。
+更新：2026-10-15。产品介绍见[项目首页](../README.md)。当前实现以代码为准，部署和设备状态以[验收记录](ACCEPTANCE.md)中的日期、版本和证据范围为准。
 
-| 用途 | 文档 |
+| 读者与用途 | 入口 |
 | --- | --- |
-| 功能、代码位置、数据流与技术边界 | [功能—代码架构实现](FUNCTION_CODE_ARCHITECTURE_20261010.md) |
-| 本轮检查结果、设备阻塞与执行顺序 | [全链路验收与下一步](E2E_ACCEPTANCE_20261010.md) |
-| 接手项目 | [交接入口](HANDOFF_20261002.md) |
-| 用户归属、公共目录与收藏 | [用户工作区与验收](USER_WORKSPACE_20261010.md) |
-| 华师大小程序、官网录入与 MuMu 跳转 | [快速入口验收](QUICK_ACCESS_ACCEPTANCE_20261010.md) |
-| 服务器运维 | [服务器操作记录](SERVER_OPERATIONS.md) |
-| 手机数据与校园作品管理 | [运营台](ADMIN_CONSOLE.md) |
-| 运营台视觉、侧边栏与浏览器验收 | [界面更新](ADMIN_VISUAL_20261010.md) |
-| 开源依赖与许可 | [开源使用说明](OPEN_SOURCE_USAGE.md) |
-| 域名备案 | [备案流程](DOMAIN_FILING.md) |
+| 试用与功能操作 | [使用指南](USAGE.md) |
+| 继续开发 | [开发指南](DEVELOPMENT.md)、[交接清单](HANDOFF.md) |
+| 理解模块与数据 | [架构](ARCHITECTURE.md)、[数据模型](DATA_MODEL.md) |
+| 课程与 AI 学习 | [课程知识工作台](COURSE_NOTEBOOK.md) |
+| 管理用户和审核项目 | [运营台](ADMIN_CONSOLE.md)、[项目审核](PROJECT_REVIEW.md) |
+| 部署、维护与域名切换 | [部署手册](REMOTE_DEPLOYMENT.md)、[运维](SERVER_OPERATIONS.md)、[域名恢复](DOMAIN_FILING.md) |
+| 确认完成范围 | [验收记录](ACCEPTANCE.md)、[路线图](ROADMAP.md) |
+| 设计、学校适配、微信 | [设计](DESIGN.md)、[ECNU 适配](ECNU_ADAPTER.md)、[微信配置](WECHAT_APPLICATION.md) |
+| 开源与扩展契约 | [开源使用](OPEN_SOURCE_USAGE.md)、[插件契约](PLUGIN_SPEC.md) |
 
-## 历史资料
+## 维护方式
 
-旧演示技术问答、9 月迭代状态和 10 月 9 日执行清单已归档到 `archive/`，原路径保留短索引，使既有链接继续有效。带日期的部署及验收记录保留证据，当前状态以本页前三个入口为准。
+同一主题维护一份固定名称的文档。实施前读相关代码，实施后更新功能范围、部署依赖和验收结果。测试数量只记录在验收文档，附执行日期；运行版本从 Release 元数据读取。
 
-`ARCHITECTURE.md`、`DEVELOPMENT.md`、`DESIGN.md`、`USAGE.md` 等文件当前含用户尚未提交的编辑，本轮保留这些修改。整理历史资料时先核对生产实现，避免将早期 NestJS/PostgreSQL 方案当作现网配置。
+已合并的临时方案、日期清单、研究笔记和过期阶段日志已从当前目录删除。历史正文可从 Git 历史查阅；整理前的本机文档另有 Git 忽略目录中的备份。第三方源码的来源说明和许可随代码保留。

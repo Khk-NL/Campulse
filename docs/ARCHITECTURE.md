@@ -1,132 +1,56 @@
-# Campulse 架构 / Architecture
+# 系统架构
 
-> 本文档描述**当前已实现**的架构。愿景与路线见 [`DEVELOPMENT.md`](./DEVELOPMENT.md)。
+更新：2026-10-15。当前产品由 Flutter 客户端、PocketBase、Node.js AI 网关和静态官网/运营台组成。
 
-## 1. 分层与依赖方向 / layering and dependency direction
-
-依赖是**单向**的，没有环。这条规则是整个仓库可维护性的基础。
+## 运行路径
 
 ```text
-@campus/launcher            纯类型，不依赖任何包
-      ↓
-@campus/models              领域模型（高校无关）
-      ↓
-@campus/university-adapter  适配层契约（接口 + 纯函数）
-      ↓
-@campus/adapter-ecnu        ECNU 实现 —— 唯一允许出现 ECNU 专有信息的地方
-      ↓
-apps/api                    NestJS 后端
+Flutter Android
+ ├─ PocketBase HTTPS API → 账号、课程、笔记、计划、收藏、社区
+ ├─ /ai/v1/* → Node 网关 → EduWork 核心模块 + ChatECNU
+ └─ CampusLauncher → 外部网页 / 微信 OpenSDK
 
-@campus/core                通用业务规则（依赖 launcher + models）
-@campus/plugin-runtime      插件契约（依赖 models）
-apps/mobile                 Flutter 客户端（独立语言，不依赖上述 TS 包）
-apps/admin                  管理后台（独立）
+Caddy（现有共享服务器的 80/443）
+ ├─ /ai/* → 127.0.0.1:8787（去掉 /ai 前缀）
+ └─ 其他路径 → 127.0.0.1:8090
+                  ├─ PocketBase API 与受保护附件
+                  └─ pb_public：官网与运营台
 ```
 
-`@campus/launcher` 不依赖任何东西，因为 `LaunchTarget` 是最低层的共享词汇：领域模型与适配层
-都要引用它，反过来依赖会成环。
+当前 APK 公开地址见 `apps/mobile/config/eduwork.production.example.json`，仍使用临时域名。正式域名切换按[域名恢复](DOMAIN_FILING.md)执行。
 
-### 为什么客户端不共享 TypeScript 类型
+## 模块与代码
 
-Flutter 是 Dart，无法复用 TS 类型。因此客户端与后端之间靠 **REST + OpenAPI** 对齐，而不是靠
-共享代码。这是 Phase 0「客户端与后端解耦」验收标准的技术含义：后端可以独立部署与演进，
-客户端只依赖 HTTP 契约。
-
-## 2. 各包职责 / package responsibilities
-
-| 包 | 职责 | 明确不做 |
+| 模块 | 主要位置 | 职责 |
 | --- | --- | --- |
-| `launcher` | `LaunchTarget` 联合类型、`CampusLauncher` 接口、`LaunchPlan` | 任何平台代码 |
-| `models` | 领域实体、枚举、纯判定函数（如 `ruleAppliesInWeek`） | 网络、数据库、ECNU 专有信息 |
-| `university-adapter` | 六个 Provider 接口、`UniversityAdapter`、适配器注册表 | 具体高校实现 |
-| `adapter-ecnu` | ECNU 常量、OAuth2、`/profile` 映射、mock 目录 | 通用业务规则 |
-| `core` | Launcher 决策与回退编排、统一搜索 | 平台代码、I/O |
-| `plugin-runtime` | 清单解析、沙箱策略、生命周期契约 | 加载器实现（Phase 4） |
-| `apps/api` | REST、持久化、适配器装配 | 高校专有逻辑（应下沉到 adapter） |
+| 启动、会话与偏好 | `apps/mobile/lib/core/` | 启动探测、安全存储会话、主题与语言 |
+| 公共目录与搜索 | `apps/mobile/lib/data/repositories/`、`features/apps/` | 远程目录、分类、收藏和服务启动 |
+| 课程与学习 | `apps/mobile/lib/features/study/`、`features/timetable/` | 课程表、CSV、笔记、计划和知识工作台 |
+| 项目社区 | `apps/mobile/lib/features/apps/forge_page.dart`、`forge_repository.dart` | 我的仓库、逐项目审核、发现、讨论、回复和关注 |
+| AI 与学习产物 | `apps/ai-gateway/src/server.mjs`、`notebook.mjs` | 鉴权、原文检索、模型调用、产物校验与 FSRS |
+| 官网与运营台 | `deploy/pocketbase/pb_public/` | 产品页面、分层管理界面、元数据驱动记录维护 |
+| 数据结构与访问规则 | `experiments/pocketbase/pb_migrations/`、`deploy/pocketbase/pb_migrations/` | 基础集合与生产增量迁移 |
+| 高校适配 | `adapters/ecnu/`、客户端高校配置 | 校方接口契约和学校信息 |
+| TypeScript 领域契约 | `packages/` | 课程规则、标签归一化、Launcher、SDK 和插件契约 |
 
-## 3. 后端请求流 / request flow in the backend
+客户端采用 ChangeNotifier 与 InheritedNotifier 组织状态。Repository 隔离界面和数据服务；生产配置使用 PocketBase。启动的另一条分支保留旧 REST 客户端，正式启动已移除本地演示数据回退，测试样本位于客户端测试目录。
 
-```text
-HTTP → Controller (DTO 校验)
-     → Service (业务规则)
-     → PrismaService (持久化)
-     → PostgreSQL
-```
+## 数据与权限
 
-需要外部数据时，Service 通过注入的 `UniversityAdapterRegistry` 取到适配器：
+公共快速访问由管理员维护，收藏属于用户。个人课程、笔记、卡片和成果通过 owner 及 courseId 组织；计划和学习过程保存在用户工作台快照。社区项目持有作者关系，讨论、回复和关注继承项目可见范围。集合映射见[数据模型](DATA_MODEL.md)。
 
-```text
-ServicesService.syncFromAdapter(universityId)
-  → registry.get(universityId)        未注册 → 404
-  → requireCapability(adapter,'services')  能力缺失 → CapabilityNotSupportedError
-  → adapter.services.listServices()
-  → upsert by (universityId, sourceId)      幂等
-```
+普通用户使用 PocketBase 会话，登录态持久化到设备安全存储，启动尝试刷新；网络超时保留已有会话。网关通过服务端 auth-refresh 校验已验证账号，使用请求者令牌读取资料，再检查用户与课程归属。
 
-**关键约定**：Core 不认识 `ECNUAuthProvider`，只认识 `UniversityAdapter`。唯一提到具体高校
-名字的地方是 `apps/api/src/adapters/adapters.module.ts` 里的一行 `createECNUAdapter()` ——
-接入第二所高校就是加一行。
+运营台使用 PocketBase 超级管理员身份，具备全库权限。普通用户访问规则、运营人员操作范围和后续分级角色分别管理。
 
-## 4. Launcher 的设计（§7）
+## AI 集成
 
-Launcher 只做三件事：发现 → 判断类型 → 用最合适方式打开。实现被刻意拆成两半：
+当前运行方式为 `campulse-headless`：复用 EduWork 的 parser、tokenizer、mindmap、evidence-labels，结合 Campulse 鉴权、资料读取、ChatECNU 和成果存储。`eduworkRevision` 表示导入模块的上游来源提交。
 
-- **决策是纯函数**（`resolveLaunchPlan`）。UI 可以在用户点击**之前**告诉他会发生什么，
-  而且所有回退路径都能被穷举单测，不必真的拉起微信或跳应用商店。
-- **执行交给平台注入的 `LaunchTransportHandler`**。Core 里没有一行平台代码，Android / iOS /
-  Web 各自只实现自己真正有的那几路传输。
+状态接口根据模型配置和成果集合可用性返回能力。完整接口与容量边界见[课程知识工作台](COURSE_NOTEBOOK.md)。
 
-三条用类型表达的硬规则：
+## 历史实现与演进
 
-1. 声明了能力却没有实现 → **构造时**抛错，而不是等用户点击才失败
-2. 用户显式拒绝（`denied`）→ 立刻停手，**不回退**，否则会变成无视用户意愿的连环跳转
-3. 小程序不支持时**绝不**退化到 WebView 打开 `originalId`（§7），那样只会得到白屏
+`apps/api` 保存 NestJS/Prisma/PostgreSQL 实现，当前部署范围采用 loopback，产品主链路使用 PocketBase。其认证、授权及限流属于再次公开部署前的工作。
 
-## 5. 统一搜索的设计（§11）
-
-搜索对象横跨服务 / 应用 / 课程 / 公告 / 活动 / 任务，字段差异极大。因此先把它们归一成一种
-扁平的 `SearchDocument`，搜索算法只认识这一种形状。
-
-排序是**可解释**的：分数完全由命中字段决定（标题 100 > 标签 60 > 关键词 30 > 分类 20），
-而不是某种不透明的相似度。这样当结果不合理时，能看出是标题命中错了还是标签匹配过度。
-
-两条刻意的取舍：
-
-- `description` **不**参与匹配。长描述噪音大，纳入匹配会让「图书馆」返回一堆只顺带提及的
-  服务，直接损害结果可信度。
-- 最近使用**只在分数相同时**打破平局。否则一个很久以前用过、但几乎不相关的服务会压倒真正
-  匹配的结果 —— 那是搜索最令人恼火的行为之一。
-
-## 6. 数据一致性 / data consistency
-
-`apps/api/prisma/schema.prisma` 是 schema 的**唯一真源**（§0.6）。禁止手工改数据库：所有变更
-都走 `pnpm db:migrate` 生成 migration 并提交，因此 schema、migration 与 `@campus/models`
-三者必须同时动。
-
-### 用类型表达约束的三处
-
-1. **没有 JSON 列。** §6 把 `config` / `launch_config` 设计成未约束 JSON，与 §0.7 冲突。
-   两者都被展开成结构化列，跨列合法性由 `launch-target.mapper.ts` 单向把关。
-2. **`LaunchColumns` 用 Prisma 蛇形枚举**（`wechat_mini_program`）而不是领域取值
-   （`wechat-mini-program`），因为它的返回值会直接展开进 Prisma 的 create/update。
-3. **`allowNativeCode` 的类型是字面量 `false`**，任何试图打开它的代码都过不了编译（§16）。
-
-## 7. 错误与降级 / errors and degradation
-
-| 情况 | 表达方式 |
-| --- | --- |
-| 高校未接入 | `registry.get()` 返回 `null` → 404 |
-| 能力未接入 | `CapabilityNotSupportedError`（抛错，不返回假数据） |
-| 学籍接口不存在 | `getEnrollment()` 返回 `null`（正常降级，UI 隐藏） |
-| 目标无法打开 | `LaunchPlanResult` 的失败分支（正常状态，不是异常） |
-| 输入非法 | DTO 校验 → 400 |
-
-原则：**未接入的能力抛错而不是返回假数据**。静默的假成功比崩溃更难查。
-
-## 8. 安全边界 / security boundaries
-
-- **认证**（§19）：`AuthProvider` 没有任何接受口令的方法。口令只在校方认证页面输入，
-  Campulse 永远看不到。生产环境使用 mock 认证会**启动即失败**。
-- **插件**（§15/§16）：清单解析拒绝目录穿越；桥接方法与权限的映射表是默认拒绝的落点；
-  网络策略默认拒绝明文 http。
-- **最小权限**（§0.8）：`SENSITIVE_PERMISSIONS` 单独列出，需要单独提示。
+TypeScript 包按已有依赖保持单向分层：Launcher 类型 → 领域模型 → 高校适配契约 → ECNU 实现。Flutter 使用 Dart 模型与 Repository 映射。迁移其他数据库时保留业务 ID、归属、课程关系、附件及成果契约，并以双用户隔离测试验证。

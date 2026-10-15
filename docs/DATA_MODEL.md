@@ -1,138 +1,64 @@
-# Campulse 数据模型 / Data Model
+# 数据模型与归属
 
-> 真源是 `apps/api/prisma/schema.prisma`。本文档解释**为什么这样设计**，以及 TypeScript
-> 领域模型与数据库列之间的对应关系。
->
-> The source of truth is `apps/api/prisma/schema.prisma`. This document explains the *why* and
-> the mapping between the TypeScript domain models and the database columns.
+更新：2026-10-15。现网业务数据库为 PocketBase（内置 SQLite）。集合结构由基础迁移与生产迁移共同定义；Prisma schema 属于旧 API 实现。
 
-## 1. 命名与映射约定 / naming and mapping
+## 业务层级
 
-| 位置 | 约定 |
-| --- | --- |
-| TypeScript（`@campus/models`） | camelCase |
-| PostgreSQL | snake_case，由 Prisma 的 `@map` 负责映射 |
-| Prisma 枚举值 | snake_case（必须是合法标识符），例如 `official_hub` |
-| 领域联合类型 | kebab-case，例如 `official-hub` |
+```text
+用户
+ ├─ 学习
+ │   ├─ 课程 → 笔记 / PDF、复习卡片、学习成果
+ │   ├─ 课程表（同一批课程的时间视图）
+ │   └─ 计划、学习过程、个人通知与待办
+ ├─ 校园 GitHub
+ │   ├─ 个人仓库 → 收到的讨论与回复
+ │   └─ 社区项目 → 参与的讨论与回复、Star
+ └─ 收藏 → 引用公共服务或入口
 
-枚举两边不可能自动对齐，因此显式写出双向映射并做穷举检查（`apps/api/src/services/enum.mapper.ts`）。
-任何一侧新增取值都会导致编译失败。
-
-## 2. 实体 / entities
-
-### University
-
-| 领域字段 | 数据库列 | 说明 |
-| --- | --- | --- |
-| `id` | `id` | 稳定标识，ECNU 为 `ecnu` |
-| `shortName` | `short_name` | 紧凑 UI 用 |
-| `domain` | `domain` | 主域名 |
-| `config.termWeeks` | `term_weeks` | 教学周总数 |
-| `config.periodsPerDay` | `periods_per_day` | 一天最大节次 |
-| `config.weekStartsOn` | `week_starts_on` | 1 = 周一 |
-| `config.timezone` | `timezone` | IANA 时区 |
-| `config.locales` | `locales` | `text[]` |
-| `config.capabilities` | `capabilities` | `text[]`，适配器上报的能力 |
-
-⚠️ `term_weeks` / `periods_per_day` 的当前值（18 / 13）**未经核实**，接入官方课表前必须确认。
-
-### User
-
-| 领域字段 | 数据库列 | 说明 |
-| --- | --- | --- |
-| `externalUserId` | `external_user_id` | 学号 / 工号 |
-| `roles` | `roles` | `Role[]`，平台级角色 |
-| `status` | `status` | 生命周期 |
-
-唯一键是 `(university_id, external_user_id)` —— 学号**校内唯一、跨校可重复**，所以唯一键
-必须带 `university_id`。
-
-⚠️ §19 要求不保存学校密码，因此这里只存认证后由 IdP 返回的稳定标识，**没有任何口令字段**。
-
-### CampusService
-
-| 领域字段 | 数据库列 | 说明 |
-| --- | --- | --- |
-| `category` | `category` | `ServiceCategory` |
-| `type` | `type` | `LaunchTargetType`，与 `launchTarget.type` 冗余 |
-| `launchTarget` | `launch_*` 共 9 列 | 见下 |
-| `origin` | `origin` | §18 的四类标识 |
-| `sourceSystem` | `source_system` | 来源系统 |
-| `sourceId` | `source_id` | **同步去重键** |
-| `tags` | `tags` | `text[]`，§11 标签搜索用 |
-| `lastVerifiedAt` | `last_verified_at` | 入口最近一次被确认可用 |
-
-唯一键 `(university_id, source_id)`；另有 `(university_id, category)` 与
-`(university_id, status)` 两个索引支撑列表查询。
-
-## 3. `LaunchTarget` 的展开 / flattening the launch target
-
-§6 用一个 `launch_config` JSON 表达启动方式。§0.7 禁止到处传未经约束的 JSON，因此它被展开成
-9 个结构化列，由 `apps/api/src/services/launch-target.mapper.ts` 单向把关。
-
-| 目标类型 | 用到的列 |
-| --- | --- |
-| `web` | `launch_url`（必填）、`launch_preferred_mode`、`launch_fallback_url` |
-| `wechat-mini-program` | `launch_original_id`（必填）、`launch_path`、`launch_fallback_url` |
-| `native-app` | `launch_scheme`（必填）、`launch_fallback_url`、`launch_store_url` |
-| `campus-app` | `launch_app_id`（必填）、`launch_route` |
-
-**取舍**：列变多了，数据库却无法表达「type = web 就必须有 url」这类跨列约束。因此 mapper
-承担了全部合法性检查，两个方向都做，并且在 `default` 分支用 `never` 做穷举检查 —— 新增目标
-类型时编译器会直接拦下。
-
-未被某类型使用的列一律写 `null`，而不是保留旧值：否则把服务从 `web` 改成 `native-app` 会留下
-一个陈旧的 `launch_url`，之后任何读取都产生歧义。
-
-## 4. 高校范围 / university scope
-
-```ts
-type UniversityScope =
-  | { kind: 'all' }
-  | { kind: 'only'; universityIds: readonly UniversityId[] };
+公共目录
+ ├─ 官方小程序与官网
+ └─ 校园公告与活动
 ```
 
-刻意用判别联合而不是可空的 `university_id`：可空外键会让「对所有高校可见」与「忘记设置」
-变成同一个值。这类 bug 在 Phase 3 开放 Store 时会集中爆发。
+## PocketBase 集合
 
-## 5. 事务模型（§8 / §10）
-
-`Announcement`、`CampusEvent`、`CampusTask` 是三个**并列**的一级实体，而不是同一条消息配上
-不同的 `type` 字段 —— §8 的第一条要求就是「避免一切都是 Message」。它们的生命周期、可执行
-操作与反馈语义都不同。
-
-| 实体 | 来源类型 | 结构化反馈（§10） |
+| 集合 | 内容 | 归属与读取边界 |
 | --- | --- | --- |
-| `Announcement` | `TransactionSourceType` | 已读 / 已确认 / 有疑问 |
-| `CampusEvent` | 同上 | 参加 / 不参加 / 无法参加 / 待定 |
-| `CampusTask` | 同上 | 未开始 / 进行中 / 已完成 / 无法完成 |
+| `users` | 普通账号与账号资料 | 用户自己的记录；管理员维护 |
+| `user_courses` | 导入课程与时间规则 | owner |
+| `course_notes` | 笔记正文、PDF、时间字段 | owner + courseId；PDF 受保护 |
+| `study_workspaces` | 计划、学习记录、证据、Wiki、智能体配置 | owner；payload 用户快照 |
+| `course_review_cards` | 卡片、排程状态、评分历史 | owner + courseId |
+| `course_artifacts` | 测验、闪卡、导图、对话及互动 | owner + courseId；产物课程归属固定 |
+| `campus_content` | 高校信息、公共服务、课程目录、公告、活动及定向内容 | 公共记录 owner 留空；个人通知/待办指定 owner |
+| `user_favorites` | 个人收藏 | owner + board + entryKey 唯一 |
+| `forge_repositories` | 项目、README、GitHub 链接及审核材料 | 作者读取本人项目；公开范围受审核状态、学校与可见性约束 |
+| `forge_discussions` | 项目问题、建议和讨论状态 | 发言者 + repository，访问继承项目 |
+| `forge_replies` | 讨论回复 | 发言者 + discussion，访问继承项目 |
+| `forge_stars` | 项目关注 | owner + repository 唯一 |
 
-命名注意：领域类型叫 `CampusEvent` 而不是 `Event`，因为 `Event` 是 DOM 的全局类型，在同时
-面向浏览器与 Node 的 monorepo 里迟早冲突。
+具体字段、索引和级联行为以迁移代码为准。运营台分层视图复用这些关系，同一记录可从用户或项目上下文查看。
 
-### 调课为什么不改写 Course
+## 公共与个人内容
 
-§9 的例子「第七周周三调到文史楼 201」应当表达为一个 `isScheduleChange: true` 且指向原课程的
-`CampusEvent`，而**不是**就地修改 `Course`。原课表是事实，调课是一次事件；改写 Course 会让
-「这学期原本的安排是什么」永久丢失。
+`campus_content` 的 published 控制发布，kind 区分服务、公告、活动和待办等，payload 保存对应领域数据。迁移 1790210012 增加 owner：公开记录按发布状态读取；带归属的记录按当前账号读取；个人待办要求明确归属。
 
-## 6. 现有表与尚未映射的领域模型 / current tables and remaining models
+服务目录中的 demo 标记属于服务端记录属性，管理员可以维护。生产客户端已移除离线演示数据替代，连接失败显示网络状态与重试入口。测试账号、可管理测试记录继续保留。
 
-`apps/api/prisma/schema.prisma` 当前有 9 个模型、6 个 migration：`University`、`User`、
-`CampusService`、`CampusApp`、`CampusAppUsage`、`CampusAppTag`、`CampusAppTagAlias`、
-`CampusAppTagLink`、`CampusAppLike`。`CampusApp` 已建表，不再属于待补模型；
-`University.firstPeriodStart`、`University.periodMinutes` 及服务/应用的 `openCount` 也已入表。
-这套 NestJS/Prisma API **未部署到现网**；生产 App 使用 PocketBase，不能把两套数据库当作同一份线上 schema。
+## 计划、笔记与学习成果
 
-以下领域模型尚未映射到旧 API 的 Prisma 表；PocketBase 中的 `user_courses`、
-`course_notes`、`study_workspaces` 和 `campus_content` 是当前 MVP 的独立存储，不代表旧 API 已有同名表：
+计划使用 `study_workspaces.payload.activities`，完成时间 completedAt 控制待办/归档，恢复时清空。优先级、标签、子任务、预计用时保留在任务内。快照同步仍存在多设备后写覆盖，逐条版本冲突合并列入后续。
 
-| 模型 | 计划阶段 |
-| --- | --- |
-| `Course` + `CourseScheduleRule` | Phase 2 |
-| `Announcement` / `CampusEvent` / `CampusTask` | Phase 2 |
-| `Group` / `GroupMembership` | Phase 2.5 |
+笔记正文上限与 Markdown 导入的 2 MB 对齐，PDF 文件上限 20 MB。受保护文件通过用户会话获取文件令牌。成果 payload 上限 512 KB，对话应用侧存档上限 450 KB；卡片评分历史保留最近 500 条。
 
-`CourseScheduleRule` 已经实现了 §9 的单双周与自定义周语义（`ruleAppliesInWeek`），并且
-**自定义周非空时覆盖** `startWeek`/`endWeek`/`parity` —— 这覆盖「第 3、5、9 周上课」这类不规则
-排课。
+## 迁移顺序
+
+全新库先执行 `experiments/pocketbase/pb_migrations/` 的四个基础迁移，再执行 `deploy/pocketbase/pb_migrations/` 的生产迁移。后者当前为 1790210000 至 1790210012，共 13 个文件。
+
+现有生产库备份后按增量部署手册升级，保持已执行迁移内容固定。结构检查与真实数据库执行分别验证。
+
+## 旧 Prisma 模型
+
+`apps/api/prisma/schema.prisma` 保存 University、User、CampusService、CampusApp、CampusAppUsage、Tag、TagAlias、TagLink、CampusAppLike，共九个模型及六个 migration。它与现网 PocketBase 是两套结构。
+
+课程契约中的 firstPeriodStart、periodMinutes 和目录 openCount 按各自 TypeScript/Dart 模型及映射维护。旧 API 的使用量、点赞等表与当前社区集合分别演进，迁移时需要显式映射。

@@ -1,28 +1,42 @@
-# 微信开放平台申请材料
+# 微信开放平台配置
 
-官网：https://campus.scsldr.cn
+更新：2026-10-15。当前使用 Android OpenSDK 的 WXLaunchMiniProgram。功能条件依据[官方说明](https://developers.weixin.qq.com/doc/oplatform/Mobile_App/Launching_a_Mini_Program/Launching_a_Mini_Program.html)及本项目后续客服反馈分别记录。
 
-隐私说明：https://campus.scsldr.cn/privacy.html
+## 应用身份
 
-流程图：https://campus.scsldr.cn/workflow.svg
+| 项目 | 已核对值 |
+| --- | --- |
+| 名称 | Campulse |
+| 移动应用 AppID | wx04399edac364fa8e |
+| Android 包名 | cn.campus.campus_mobile |
+| 预览证书 MD5 | 3b8a0599b4ce81f2f2932c8121c8b4e4 |
+| 平台状态 | 移动应用审核已通过；APP 跳转小程序显示未获得 |
+| 账号资质 | 最近核对为个人主体、未认证 |
 
-GitHub 下载：https://github.com/Khk-NL/Campulse/tree/main/release
+上述登记与 MuMu 已安装 APK 核对一致。生产签名变更需重新提取证书摘要并同步平台。AppSecret 由服务端私有管理；OpenSDK 小程序拉起使用公开移动应用 AppID。
 
-## 应用简介
+## 账号条件与当前阻塞
 
-Campulse 的核心定位包括“校园 GitHub”：让学生开发的项目被发现、被使用，连接项目作者与校园用户。当前提供项目发现、介绍与仓库入口；项目发布、反馈和贡献者招募是后续完善方向。Git、PR、CI 等代码协作继续使用 GitHub，不宣称已实现独立代码托管。
+官方功能页说明应用审核通过后取得拉起能力，并说明已认证账号可跳转任意合法小程序。客服针对本项目明确：个人未认证账号仅能跳转本账号关联小程序；企业或个体工商户认证后可跳转任意合法小程序，权限自动生效。
 
-Campulse 是面向校园生活与个人学习的 Android 应用，提供校园网站与工具入口、常用服务收藏，以及课表、课程资料、笔记和学习记录管理。用户通过邮箱注册独立 Campulse 账号；课程问答在模型服务配置就绪后，基于选中的个人资料提供学习参考。项目优先适配华东师范大学场景，属于独立开发项目，并非学校官方应用。
+当前四个华师大相关入口均返回 has_no_permission，目的地验收仍待完成。下一步先确定适用主体与认证条件，或测试本账号关联且已发布的小程序；条件满足后复测。
 
-## 运行流程
+## 参数与代码
 
-用户打开 Campulse，进入服务入口、课程空间或学生项目发现。服务入口跳转到原网站，由原服务管理登录；个人课程空间通过邮箱注册、邮件验证和登录，访问当前账号的 PocketBase 数据。用户主动选中资料提问后，网关验证账号与资料归属，再调用 ChatECNU 并返回答案。微信小程序唤起需完成开放平台配置，当前不应描述为已经通过审核或已可用。
+移动应用 AppID 在 GitHub Secret CAMPUS_WECHAT_APP_ID 中，由 CI 传入 Dart 编译参数；原生 register 与回调使用同一 AppID。
 
-## 提交前核对
+小程序目录使用 gh_ 原始 ID，path 空值打开首页，正式版类型为 0。小程序 wx AppID 可保存为公开元数据，实际 userName 使用 gh_ ID。[Android 示例](https://developers.weixin.qq.com/doc/oplatform/Mobile_App/Launching_a_Mini_Program/Android_Development_example.html)给出参数定义。
 
-- 申请主体、开发者姓名及备案信息按真实情况填写，不用学校名义或校徽暗示官方身份。
-- 包名当前为 `cn.campus.campus_mobile`；签名摘要从最终审核安装包提取，不能猜测。
-- 当前 release 使用 Debug 签名，正式分发前配置自己的生产签名并妥善保管。
-- 官网需通过公网 HTTPS 访问；描述与提交安装包一致。下载目录现有旧预览包不等于已经接入新生产后端。
-- 学校 SSO、教务同步、EduWork 成果生成等未完成能力不写成现有功能。
-- 材料不保证审核结果，以实际申请页面要求为准。
+代码位置：Dart 的 wechat_mini_program_transport.dart、Android MainActivity.kt、wxapi/WXEntryActivity.kt。sendReq 成功只代表请求交接；验收还需确认微信打开目标首页及返回 App。
+
+## 申请材料参考
+
+应用简介（按平台字数限制调整）：
+
+> Campulse 面向高校学生，提供校园服务入口、课程表、资料笔记、学习计划和 AI 学习工具，并支持学生项目展示、讨论与关注。项目经学校归属核验和审核后公开。个人学习数据通过独立账号同步，校园网站及小程序由用户主动打开。
+
+官网目标为 https://campus.scsldr.cn；当前可用配置与域名恢复状态见[验收记录](ACCEPTANCE.md)。官网提供隐私页、运行流程图和 GitHub Release 下载链接。学校名称、标识、主体及备案按实际授权填写。
+
+## 复测
+
+先在微信内确认目标正式版可访问，再用同一签名 APK 逐条点击。记录设备、微信/App 版本、原始 ID、页面、反馈和返回结果。真实 Android 手机与模拟器分别填写结果。

@@ -60,7 +60,7 @@ Campulse 的项目、讨论、回复和关注记录保存在自己的数据库�
 | 微信小程序 | 四个入口已完成显示与实际点击测试，微信返回 `has_no_permission`；客服确认当前个人未认证账号受跳转范围限制，待资质条件满足后复测 |
 | 发布前检查 | 正式域名恢复、邮件验证与密码重置收件、微信真机跳转列入后续验收 |
 
-已完成的接口检查与实际设备点击分别记录，具体范围见[全链路验收](docs/E2E_ACCEPTANCE_20261010.md)和[快速入口测试记录](docs/QUICK_ACCESS_ACCEPTANCE_20261010.md)。上表微信资质结论来自后续客服反馈，早期测试记录保留当时现场。
+已完成的接口检查与实际设备点击分别记录，具体范围见[全链路验收](docs/ACCEPTANCE.md)。上表微信资质结论来自后续客服反馈，早期测试记录保留当时现场。
 
 ## 一起完善 Campulse
 
@@ -72,10 +72,10 @@ Campulse 的项目、讨论、回复和关注记录保存在自己的数据库�
 
 当前主要运行部件是 Flutter 客户端、PocketBase 数据服务、Node.js AI 网关，以及官网和运营台。TypeScript 共享包与高校适配层提供领域模型和接口契约；早期 NestJS/Prisma 方案保留在仓库中供后续演进参考。
 
-- [功能与代码架构](docs/FUNCTION_CODE_ARCHITECTURE_20261010.md)：模块位置、数据流与实现边界。
+- [功能与代码架构](docs/ARCHITECTURE.md)：模块位置、数据流与实现边界。
 - [项目审核流程](docs/PROJECT_REVIEW.md)：个人仓库、公开范围与管理员审核。
 - [部署与运维](docs/SERVER_OPERATIONS.md)：远程服务配置及维护记录。
-- [交接与后续任务](docs/HANDOFF_20261002.md)：接手入口和待验收事项。
+- [交接与后续任务](docs/HANDOFF.md)：接手入口和待验收事项。
 - [开源软件使用说明](docs/OPEN_SOURCE_USAGE.md)：使用的组件、参考项目与许可。
 
 开发环境、运行命令与历史决策按[文档导航](docs/README.md)查阅。

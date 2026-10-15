@@ -1,48 +1,59 @@
-# Campulse 远程后端：上线前操作手册
+# 远程部署
 
-当前目标服务器使用 Linux + 1Panel，且已有其他网站。2026-09-26 通过远程终端确认：实际由现有 Caddy 管理 80/443，并非 OpenResty。应复用 Caddy，仅新增 Campulse 站点，不能覆盖原配置或另启反向代理抢占端口。具体部署见 [阿里云共享服务器部署](ALIYUN_DEPLOYMENT.md)；下面各节仍保留通用双域名示例。
+更新：2026-10-15。已有服务器采用增量升级；全新安装与现有生产库分开操作。当前部署证据见[验收记录](ACCEPTANCE.md)。
 
-本版支持 PocketBase 多用户邮箱注册、密码重置，以及经过用户身份和资料所有权校验的 ChatECNU 课程问答。**EduWork Studio 的远程成果生成尚未实现**；`GET /v1/status` 中 `ready=false`、`aiReady=true` 正确表示“模型问答可用，EduWork 未接通”。学校 SSO、教务 API、文件检索、Quiz/闪卡/思维导图也不因填写地址而自动启用。
+## 现有环境
 
-## 0. 先准备并记录非敏感信息
+阿里云共享服务器 47.100.32.82，Linux + 1Panel，实际由 Caddy 管理 80/443。PocketBase 与 AI 网关分别监听 127.0.0.1:8090、127.0.0.1:8787，systemd 单元为 campus-pocketbase、campus-ai。
 
-- 一台可长期运行的 Linux 服务器，具有固定公网 IP 和持久磁盘。服务器上安装 Caddy、Node.js 22+；使用与本地相同的 PocketBase 0.40.4 Linux 版本，升级前先测试迁移。不要在普通测试主机直接存放真实学生数据。
-- 两个自己有权使用的域名，例如 `pb.example.com` 和 `ai.example.com`。在域名服务商控制台把 DNS A/AAAA 记录指向服务器；放通公网 80/443，**不开放 8090/8787**。
-- 一个可发送邮件的 SMTP 服务。向邮件提供商取得主机、端口、用户名、密码和发件地址；它们只填 PocketBase 管理后台。
-- 通过 [ChatECNU 我的令牌](https://developer.ecnu.edu.cn/vitepress/llm/authorization.html)获取模型 Key；正式面向师生服务前向校方确认生产令牌、配额和数据使用要求。Key 只放 `/etc/campus/ai.env`，不放 APK、仓库或 PocketBase 公共记录。
+| 路径 | 用途 |
+| --- | --- |
+| /opt/campus/pocketbase | PocketBase 二进制、pb_data、pb_migrations、pb_public |
+| /opt/campus/ai-gateway | 网关源码、锁定依赖 |
+| /etc/campus/ai.env | 仅服务端读取的模型与内部后端配置 |
+| /opt/campus/backups | 每次增量更新的恢复点 |
+| /etc/caddy/Caddyfile | 既有站点与反向代理，先核实现行路径 |
 
-域名、IP 和公开 URL 可以告诉协作者；管理员密码、SMTP 密码和模型 Key 不要发送到聊天或提交到 Git。
+当前客户端公开地址为 `https://campus.allezafrique.cn`，网关路径为 /ai。正式域名恢复按[域名流程](DOMAIN_FILING.md)执行，迁移时保留其他网站与邮件 DNS。
 
-## 1. 在新服务器启动 PocketBase
+## 配置归属
 
-1. 从 [PocketBase 官方发布页](https://github.com/pocketbase/pocketbase/releases)下载与你服务器 CPU 架构匹配的 **0.40.4 Linux** 可执行文件并校验；放到 `/opt/campus/pocketbase/pocketbase`。新建非 root 系统用户 `campus`，只允许它读写该目录和 `pb_data`。
-2. 将 `experiments/pocketbase/pb_migrations/` 里的 4 个基础迁移及 `deploy/pocketbase/pb_migrations/` 中的生产迁移一起放到服务器的 `/opt/campus/pocketbase/pb_migrations/`。站点元数据已使用 `campus.scsldr.cn`，SMTP 使用 Brevo；部署到其他域名时须先调整。这是**全新生产库**的迁移集合；不要把生产注册策略迁入原有本机试点库。
-3. 检查 `deploy/campus-pocketbase.service.example` 中的目录、二进制路径和运行用户，保存为服务器上的 systemd 服务。服务只监听 `127.0.0.1:8090`，启动后检查日志和迁移结果。PocketBase 自带 SQLite；`pb_data` 必须在持久磁盘上。
-4. 用 `deploy/Caddyfile.example` 替换为自己的真实域名，启用 Caddy。它负责公网 HTTPS：`https://pb.你的域名` → `127.0.0.1:8090`，`https://ai.你的域名` → `127.0.0.1:8787`。先从手机网络打开 `https://pb.你的域名/api/health`，确认是有效 HTTPS、返回正常，再继续。
-5. 在 `https://pb.你的域名/_/` 创建**新的**生产管理员账号。设置 App URL、发件人、SMTP，并发送测试邮件。开启限流和定时备份；备份保存在不同磁盘或对象存储，验证能恢复。管理员账号绝不用于手机登录。
+| 配置 | 保存位置 | 谁使用 |
+| --- | --- | --- |
+| PocketBase/网关公开地址 | apps/mobile/config/eduwork.production.example.json | APK |
+| 微信移动应用 AppID | GitHub Secret CAMPUS_WECHAT_APP_ID | CI 编译参数与 OpenSDK |
+| POCKETBASE_URL | /etc/campus/ai.env，内部 127.0.0.1:8090 | 网关 |
+| CHATECNU_BASE_URL、MODEL、API_KEY | /etc/campus/ai.env | 网关 |
+| SMTP 与发件信息 | PocketBase Mail settings | 服务端发信 |
+| 普通测试/管理员凭据 | 受控本地 .tools 或私有服务器配置 | 验收与维护 |
 
-生产迁移将 `users` 的匿名创建规则设为开放、登录规则设为 `verified = true`，用户只可查看/更新自己；个人课程、笔记和学习记录沿用基础迁移的 `owner` 规则。邮箱注册只是 Campulse 自有身份，不代表已通过华师大统一认证。如果需要“仅校内人员注册”，需另做学校授权的 SSO 或批准机制，不能仅凭用户自填邮箱认定其身份。
+ChatECNU 默认模型和基址见 `apps/ai-gateway/.env.example`。修改 Key 可使用已有 `deploy/configure-ai.sh`，先检查脚本目标；模型 Key、SMTP Key 和 AppSecret 只保存在服务端。API Key 与服务登录密码分别取得。
 
-## 2. 配置并启动 AI 网关
+Brevo SMTP 使用服务商控制台给出的 SMTP Login 和 SMTP Key，并完成发件人/域名认证；现有迁移预设 smtp-relay.brevo.com:465/TLS。最终配置以实际服务商账号为准，验证流程包括测试提交、收件、注册链接和重置链接。
 
-1. 将 `apps/ai-gateway/` 部署到 `/opt/campus/ai-gateway/`，按该目录的 `package.json` 安装生产依赖（包括 `ts-fsrs`），再运行网关测试。现有生产库升级前，先按 [课程资料导入与卡片复习](NOTEBOOK_IMPORT_REVIEW.md) 备份并执行新增迁移；不要使用本手册第 1 节的全新安装步骤覆盖现有数据。
-2. 用 `apps/ai-gateway/.env.example` 作字段清单，在服务器创建**私有** `/etc/campus/ai.env`。将 `POCKETBASE_URL` 填成 `http://127.0.0.1:8090`；`CHATECNU_BASE_URL` 默认为学校公布的 OpenAI 兼容基址；`CHATECNU_MODEL` 可先选 `ecnu-plus`；`CHATECNU_API_KEY` 填你从 ChatECNU 获取的真实 Key。此文件仅允许服务账号和管理员读取，不进 Git。
-3. 检查 `deploy/campus-ai.service.example` 的 Node 路径、目录和用户，安装为 systemd 服务。它只监听服务器本机 `127.0.0.1:8787`，公网只能通过 `https://ai.你的域名` 到达。
-4. 网关的 `GET /v1/status`、`POST /v1/ask` 和 `POST /v1/cards/:id/review` 都要求 PocketBase **普通、已验证**用户令牌。`/v1/ask` 请求字段是 `courseId`、`question`、`sourceIds`（如 `note:<记录ID>` 或 `wiki:<资料ID>`）；网关重新读取用户资料并检查归属。不能让客户端提供模型 Key 或自行声称 `userId`。首次用一个仅含无敏感内容的测试笔记验证。
+## 新服务器安装
 
-`CHATECNU_API_KEY` 没填时，`/v1/ask` 返回未配置；`/v1/status` 的 `aiReady=false`。填好并完成真实调用后才可称“模型问答已接通”。本服务不保存 AI 回答；App 当前也只临时显示回答。网关并未实现文件上传、向量检索、异步成果、EduWork Host 调度或多实例分布式限流，不能把这些能力写进上线宣传。
+1. 选择固定源码提交，准备与安装脚本哈希一致的 PocketBase 0.40.4 Linux 包和 Node 22.23.3 运行时。
+2. 阅读 `deploy/install-server.sh` 的前置目录与端口检查。它要求 /opt/campus/source、对应归档和全新数据目录。
+3. 安装脚本复制四个基础迁移与全部生产迁移，递归复制官网资源，用 npm ci 安装锁定依赖，再启动两个 loopback 服务。
+4. 初始化独立超级管理员，设置 SMTP、发件人、App URL 和服务端模型 Key。
+5. 在既有 Caddy 中追加本站路由：/ai/* 去前缀转发 8787，其他请求转发 8090。验证配置后平滑重载，核对其他网站。
+6. 完成网络检查、双普通用户隔离、真实模型调用和收件验收后发布 APK。
 
-网关当前每名用户同时只处理一条、单实例同时最多处理两条问题，避免把个人模型令牌瞬间打满。若计划开放给更多人使用，先向学校申请生产配额，再增加跨实例限流/排队与用量记录。手机端现用系统安全存储保存普通用户会话，并在启动时尝试刷新；网络超时不会清除仍有效的会话，服务端明确拒绝后会退出。不要把令牌放进普通日志或编译配置。
+具体模板为 `deploy/campus-pocketbase.service.example`、`deploy/campus-ai.service.example`、`deploy/Caddyfile.example`。Caddy 模板采用通用分域名示例，现有生产是同域 /ai 路由，按实际方案配置。
 
-## 3. 构建并验收手机 App
+## 现有实例增量更新
 
-1. 当前预览版由 `.github/workflows/android-release.yml` 在 `main` 的移动端相关改动后自动检查、签名构建，发布到 GitHub `campulse-preview` Release；不要用本地脚本或调试 APK 覆盖发布资产。生产配置在 `apps/mobile/config/eduwork.production.example.json`，目前两个公开服务地址均暂为 `https://campus.allezafrique.cn`；正式域名恢复后需同时改 APK 配置与 PocketBase `meta.appURL`，重新云构建。
-2. 下载 Release APK，核对元数据源码提交及 SHA-256，覆盖安装到测试设备。按 [全链路验收流程与结果](ACCEPTANCE_20261006.md) 依次检查两名普通用户、课程与笔记同步、计划完成/恢复、管理员发布应用、AI 回答及隔离。
-3. 用真实可收信邮箱另做注册、验证、登录和密码重置。测试密码重置、重启会话、停服错误、模型额度不足和恢复备份；没有屏幕反馈与远程数据证据的项不能只凭接口成功判定通过。
-4. 进入课程空间，选中自己的一份笔记，记录一个问题，在学习记录里点“向 AI 求助”；检查返回内容与选中资料相符。云图标显示“EduWork 尚未就绪”是准确状态，不代表课程问答失败。
+1. 固定完整提交，确认现网版本、可用空间、负载与恢复点。
+2. 涉及 1790210010、0011、0012 的社区/用户关系升级，可用 `deploy/update-community.sh SOURCE_COMMIT MIGRATION_FILE`，按顺序逐文件执行；脚本支持的文件名以源码校验为准。
+3. 知识工作台升级可用 `deploy/update-notebook.sh STAGING_ABSOLUTE_PATH`。它针对 0008/0009 迁移和整套网关更新，staging 必须包含匹配的源码、锁文件、测试与迁移。新增迁移需核对其实际覆盖范围。
+4. 页面更新用 `deploy/update-public-site.sh SOURCE_COMMIT`，保留静态恢复点。
+5. 检查服务与 API，再运行[验收流程](ACCEPTANCE.md)，最后安装来源一致的云构建 APK。
 
-## 4. 下一阶段：真正适配 EduWork
+以上脚本各有特定用途，升级前读源码并比对实际已执行迁移。现有数据库采用备份及增量处理，保留附件、账号和业务记录。
 
-EduWork 目前公开的是本机 Host/Studio RPC 与桌面装配，不是 Campulse 可直接部署的多租户 HTTP 服务。[EduWork 构建说明](https://github.com/ECNU/EduWork/blob/main/docs/BUILD.md)中的本机私有 Web URL 不能公开给手机用户。要实现 Quiz、闪卡、思维导图等，需另建受限 Host worker、每用户工作区映射、异步任务队列、成果持久化、授权撤销与资源清理；确认运行环境和许可后再把 `ready` 与 `eduworkRevision` 改成真实值。不要把 ChatECNU 问答和 EduWork 成果生成混称为同一件事。
+## 发布与回滚
 
-官方参考：[PocketBase 正式部署](https://pocketbase.io/docs/going-to-production/)、[访问规则](https://pocketbase.io/docs/api-rules-and-filters/)、[华师大模型首次调用](https://developer.ecnu.edu.cn/vitepress/llm/index.html)、[ChatECNU 配额](https://developer.ecnu.edu.cn/vitepress/llm/limit.html)。
+main 的移动端/网关相关变更触发 GitHub Android 工作流，生成并校验预览签名 APK，更新 Release 及 release 元数据。纯文档修改通常只更新仓库。
+
+回滚先确定受影响部件。静态页面和网关可恢复对应备份；数据库恢复需先评估新增记录、附件及迁移兼容，必要时在独立目录演练。回滚范围和服务恢复结果写入验收记录。
