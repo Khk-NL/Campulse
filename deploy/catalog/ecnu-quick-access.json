@@ -1,4 +1,5 @@
 [
+  {"name":"随师办入口与指南","description":"学校移动服务门户的官方入口说明，含微信小程序和企业微信访问方式","category":"official-hub","origin":"official","isOfficial":true,"tags":["随师办","校务","服务"],"launchTarget":{"type":"web","url":"https://eoffice.ecnu.edu.cn/sjmhwssb/list.htm","preferredMode":"external"}},
   {"name":"华东师范大学校友服务大厅","description":"校友服务与活动入口","category":"administration","origin":"official","isOfficial":true,"tags":["校友","服务"],"launchTarget":{"type":"wechat-mini-program","originalId":"gh_92ba6f495285","path":""},"miniProgramAppId":"wx56a78e0a1b4fc641"},
   {"name":"HS狮耳","description":"HS狮耳小程序入口","category":"other","origin":"external","isOfficial":false,"tags":["校园"],"launchTarget":{"type":"wechat-mini-program","originalId":"gh_7b9fb4ea3857","path":""},"miniProgramAppId":"wxbbdd3b6bbe83a4bf"},
   {"name":"华东师范大学体育场馆管理系统","description":"体育场馆管理与预约入口","category":"venue","origin":"official","isOfficial":true,"tags":["体育","场馆","预约"],"launchTarget":{"type":"wechat-mini-program","originalId":"gh_5120ccda316b","path":""},"miniProgramAppId":"wx67e47bfe8318b823"},

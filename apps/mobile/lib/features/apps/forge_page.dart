@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:pocketbase/pocketbase.dart';
 import 'package:campus_mobile/core/pocketbase_session.dart';
@@ -24,6 +26,8 @@ class _ForgePageState extends State<ForgePage> {
   String query = '';
   int page = 1;
   Future<ResultList<RecordModel>>? result;
+  final searchController = TextEditingController();
+  Timer? searchDebounce;
   @override
   void initState() {
     super.initState();
@@ -32,6 +36,24 @@ class _ForgePageState extends State<ForgePage> {
 
   void load() {
     result = repo?.projects(page: page, query: query, mine: mine);
+  }
+
+  void search(String value) {
+    searchDebounce?.cancel();
+    final next = value.trim();
+    if (next == query) return;
+    setState(() {
+      query = next;
+      page = 1;
+      load();
+    });
+  }
+
+  @override
+  void dispose() {
+    searchDebounce?.cancel();
+    searchController.dispose();
+    super.dispose();
   }
 
   @override
@@ -72,6 +94,8 @@ class _ForgePageState extends State<ForgePage> {
                             ],
                             selected: {mine},
                             onSelectionChanged: (value) => setState(() {
+                              searchDebounce?.cancel();
+                              query = searchController.text.trim();
                               mine = value.first;
                               page = 1;
                               load();
@@ -101,15 +125,28 @@ class _ForgePageState extends State<ForgePage> {
                     ),
                     const SizedBox(height: 12),
                     TextField(
-                      decoration: const InputDecoration(
-                        prefixIcon: Icon(Icons.search),
+                      controller: searchController,
+                      textInputAction: TextInputAction.search,
+                      decoration: InputDecoration(
+                        prefixIcon: const Icon(Icons.search),
                         hintText: '搜索项目、介绍或技术话题',
+                        suffixIcon: IconButton(
+                          tooltip: '清空搜索',
+                          icon: const Icon(Icons.clear),
+                          onPressed: () {
+                            searchController.clear();
+                            search('');
+                          },
+                        ),
                       ),
-                      onSubmitted: (value) => setState(() {
-                        query = value;
-                        page = 1;
-                        load();
-                      }),
+                      onChanged: (value) {
+                        searchDebounce?.cancel();
+                        searchDebounce = Timer(
+                          const Duration(milliseconds: 300),
+                          () => search(value),
+                        );
+                      },
+                      onSubmitted: search,
                     ),
                   ],
                 ),

@@ -3,7 +3,10 @@ import assert from 'node:assert/strict';
 import { AdminClient } from '../deploy/pocketbase/pb_public/assets/admin-client.mjs';
 
 const base = process.env.CAMPULSE_ACCEPTANCE_BASE_URL || 'https://campus.allezafrique.cn';
-const catalog = JSON.parse(fs.readFileSync(new URL('../deploy/catalog/ecnu-quick-access.json', import.meta.url),'utf8'));
+const selectedName = process.argv.find(arg => arg.startsWith('--name='))?.slice('--name='.length);
+const catalog = JSON.parse(fs.readFileSync(new URL('../deploy/catalog/ecnu-quick-access.json', import.meta.url),'utf8'))
+  .filter(entry => selectedName === undefined || entry.name === selectedName);
+assert.ok(catalog.length > 0, '目录名称未匹配，请检查 --name 参数');
 const apply = process.argv.includes('--apply');
 const env = Object.fromEntries(fs.readFileSync(process.env.CAMPULSE_ACCEPTANCE_ENV || '.tools/remote-acceptance.env','utf8').split(/\r?\n/).filter(line => line.includes('=') && !line.trim().startsWith('#')).map(line => {const i=line.indexOf('=');return [line.slice(0,i).trim(),line.slice(i+1).trim().replace(/^['"]|['"]$/g,'')];}));
 const client = new AdminClient(base);

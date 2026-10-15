@@ -10,8 +10,15 @@ test('ECNU launch catalog contains unique real mini-program IDs and public AppID
 });
 test('ECNU website catalog uses school HTTPS domains and external browser launch',()=>{
   const websites=entries.filter(entry=>entry.launchTarget.type==='web');
-  assert.equal(websites.length,3);
+  assert.equal(websites.length,4);
   for(const entry of websites){const url=new URL(entry.launchTarget.url);assert.equal(url.protocol,'https:');assert.ok(url.hostname.endsWith('.ecnu.edu.cn'));assert.equal(entry.launchTarget.preferredMode,'external');assert.equal(entry.isOfficial,true);}
+});
+
+test('Suishiban links to the official access guide rather than a session-specific portal',()=>{
+  const entry=entries.find(entry=>entry.name==='随师办入口与指南');
+  assert.equal(entry.category,'official-hub');
+  assert.equal(entry.launchTarget.url,'https://eoffice.ecnu.edu.cn/sjmhwssb/list.htm');
+  assert.equal(new URL(entry.launchTarget.url).search,'');
 });
 test('catalog labels have supported categories and preserve external provenance',()=>{
   const categories=['official-hub','academic','library','campus-card','venue','network','map','administration','other'];

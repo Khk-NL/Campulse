@@ -213,6 +213,28 @@ class _AppsPageState extends State<AppsPage> {
     final AppLocalizations l10n = AppLocalizations.of(context);
     // 只返回内容：顶部栏由 AppShell 统一提供（应用 Tab）。
     // Content only: the shell supplies the shared top bar for the Apps tab.
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+          child: Column(
+            children: [
+              _header(context, l10n),
+              const SizedBox(height: 12),
+              _surfaceSwitcher(l10n),
+            ],
+          ),
+        ),
+        Expanded(
+          child: _surface == _AppsSurface.forge
+              ? const ForgePage(embedded: true)
+              : _quickAccess(context, l10n),
+        ),
+      ],
+    );
+  }
+
+  Widget _quickAccess(BuildContext context, AppLocalizations l10n) {
     return FutureBuilder<_Catalogue>(
       future: _catalogue,
       builder: (BuildContext context, AsyncSnapshot<_Catalogue> snapshot) {
@@ -232,23 +254,6 @@ class _AppsPageState extends State<AppsPage> {
             );
 
         final FavoritesController favorites = AppScope.of(context).favorites;
-        if (_surface == _AppsSurface.forge) {
-          return Column(
-            children: [
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-                child: Column(
-                  children: [
-                    _header(context, l10n),
-                    const SizedBox(height: 12),
-                    _surfaceSwitcher(l10n),
-                  ],
-                ),
-              ),
-              const Expanded(child: ForgePage(embedded: true)),
-            ],
-          );
-        }
 
         final Map<ServiceGroup, List<CampusEntry>> grouped =
             <ServiceGroup, List<CampusEntry>>{
@@ -279,9 +284,6 @@ class _AppsPageState extends State<AppsPage> {
           child: ListView(
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
             children: <Widget>[
-              _header(context, l10n),
-              const SizedBox(height: 12),
-              _surfaceSwitcher(l10n),
               if (_topics.isNotEmpty) _topicFilter(context, l10n),
               const SizedBox(height: 12),
               _subListSwitcher(context, l10n, grouped),
@@ -353,9 +355,9 @@ class _AppsPageState extends State<AppsPage> {
         ],
         selected: <_AppsSurface>{_surface},
         onSelectionChanged: (Set<_AppsSurface> selected) {
-          _surface = selected.first;
-          _topic = null;
-          _load();
+          setState(() {
+            _surface = selected.first;
+          });
         },
       );
 

@@ -11,6 +11,7 @@ class FakeForge extends ForgeRepository {
   final rows = <RecordModel>[];
   final threads = <RecordModel>[];
   final responses = <RecordModel>[];
+  final queries = <String>[];
   bool fail = false;
   @override
   String get userId => 'member1';
@@ -22,6 +23,7 @@ class FakeForge extends ForgeRepository {
     String query = '',
     bool mine = false,
   }) async {
+    queries.add(query);
     if (fail) throw StateError('network');
     final found = rows
         .where((r) => r.getStringValue('name').contains(query))
@@ -132,6 +134,48 @@ class PendingForge extends FakeForge {
 }
 
 void main() {
+  testWidgets('project search debounces input and clears to all projects', (
+    tester,
+  ) async {
+    final repo = FakeForge();
+    await tester.pumpWidget(MaterialApp(home: ForgePage(repository: repo)));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField), '校');
+    await tester.pump(const Duration(milliseconds: 150));
+    await tester.enterText(find.byType(TextField), '校园');
+    await tester.pump(const Duration(milliseconds: 299));
+    expect(repo.queries, ['']);
+    await tester.pump(const Duration(milliseconds: 1));
+    await tester.pumpAndSettle();
+    expect(repo.queries, ['', '校园']);
+    await tester.tap(find.byTooltip('清空搜索'));
+    await tester.pumpAndSettle();
+    expect(repo.queries, ['', '校园', '']);
+    expect(
+      tester.widget<TextField>(find.byType(TextField)).controller!.text,
+      '',
+    );
+  });
+
+  testWidgets(
+    'submitted search cancels debounce and leaving cancels pending work',
+    (tester) async {
+      final repo = FakeForge();
+      await tester.pumpWidget(MaterialApp(home: ForgePage(repository: repo)));
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byType(TextField), '工具');
+      await tester.testTextInput.receiveAction(TextInputAction.search);
+      await tester.pumpAndSettle();
+      await tester.pump(const Duration(milliseconds: 400));
+      expect(repo.queries, ['', '工具']);
+      await tester.enterText(find.byType(TextField), '待查询');
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump(const Duration(milliseconds: 400));
+      expect(repo.queries, ['', '工具']);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
   testWidgets(
     'project owner submits one draft and sees its review state and GitHub link',
     (tester) async {

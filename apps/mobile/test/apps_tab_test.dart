@@ -16,6 +16,8 @@
 /// verbatim.
 library;
 
+import 'dart:async';
+
 import 'package:campus_mobile/core/app_scope_repository.dart';
 import 'package:campus_mobile/core/app_state.dart';
 import 'package:campus_mobile/core/config/app_config.dart';
@@ -27,7 +29,9 @@ import 'package:campus_mobile/data/models/campus_app.dart';
 import 'package:campus_mobile/data/models/campus_service.dart';
 import 'package:campus_mobile/data/models/launch_target.dart';
 import 'package:campus_mobile/data/repositories/campus_repository.dart';
+
 import 'fixtures/in_memory_campus_repository.dart';
+
 import 'package:campus_mobile/features/apps/apps_page.dart';
 import 'package:campus_mobile/features/apps/campus_entry.dart';
 import 'package:campus_mobile/features/shared/widgets/university_brand_mark.dart';
@@ -115,6 +119,19 @@ class EmptyingCatalogueRepository extends RecordingCampusRepository {
       empty ? <CampusApp>[] : super.fetchCampusApps(query);
 }
 
+class PendingCatalogueRepository extends RecordingCampusRepository {
+  final pendingServices = Completer<List<CampusService>>();
+  int attempts = 0;
+  bool recovered = false;
+
+  @override
+  Future<List<CampusService>> listServices(CampusServicesQuery query) {
+    attempts++;
+    if (recovered) return super.listServices(query);
+    return pendingServices.future;
+  }
+}
+
 void main() {
   /// 视口调高，让页首、芯片、搜索框与子列表里的条目一次全部完成布局。
   ///
@@ -193,6 +210,47 @@ void main() {
   /// Scoping to `Card` is required: the same word also appears in a topic chip (「图书馆」 is
   /// both a service name and a tag), in the search field's own text, and in subtitles.
   Finder row(String name) => find.widgetWithText(Card, name);
+
+  for (final fails in [false, true]) {
+    testWidgets(
+      'community stays accessible while catalog ${fails ? 'fails' : 'loads'}',
+      (tester) async {
+        useTallViewport(tester);
+        final repository = PendingCatalogueRepository();
+        final state = await buildState(repository);
+        await tester.pumpWidget(wrap(state));
+        await tester.pump();
+        if (fails) {
+          repository.pendingServices.completeError(
+            StateError('catalog unavailable'),
+          );
+          await tester.pumpAndSettle();
+        }
+        final l10n = l10nOf(tester);
+        expect(find.text(l10n.appsForge), findsOneWidget);
+        await tester.tap(find.text(l10n.appsForge));
+        await tester.pumpAndSettle();
+        expect(find.text('连接校园服务后参与项目交流'), findsOneWidget);
+        expect(repository.attempts, 1);
+        if (!fails) {
+          repository.pendingServices.complete(<CampusService>[]);
+          await tester.pumpAndSettle();
+        }
+        await tester.tap(find.text(l10n.appsQuickAccess));
+        await tester.pumpAndSettle();
+        expect(repository.attempts, 1);
+        if (fails) {
+          repository.recovered = true;
+          await tester.tap(find.text(l10n.actionRetry));
+          await tester.pumpAndSettle();
+          expect(repository.attempts, 2);
+        }
+        expect(tester.takeException(), isNull);
+        await tester.pumpWidget(const SizedBox.shrink());
+        state.dispose();
+      },
+    );
+  }
 
   testWidgets('目录刷新移除消失的标签；选择栏不使用勾号', (tester) async {
     useTallViewport(tester);
@@ -504,9 +562,7 @@ void main() {
     state.dispose();
   });
 
-  testWidgets('官方目录详情仅展示管理员提供的群号', (
-    WidgetTester tester,
-  ) async {
+  testWidgets('官方目录详情仅展示管理员提供的群号', (WidgetTester tester) async {
     useTallViewport(tester);
     final RecordingCampusRepository repository = RecordingCampusRepository();
     final AppState state = await buildState(repository);
