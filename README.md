@@ -1,190 +1,81 @@
+<p align="center">
+  <img src="deploy/pocketbase/pb_public/assets/campulse-logo.png" alt="Campulse 图标" width="100" />
+</p>
+
 # Campulse
 
-> **学习、服务、创新**
-> One entry point for campus services; a real chance for campus ideas to become apps.
+学习、服务、创新。
 
-Campulse 是一个面向高校学生的独立校园数字工作台, 把散落在网站、微信小程序、独立 App 与官方工作台
-中的校园服务重新组织，并在其上提供**结构化校园事务**与**学生开发者生态**。
+Campulse 是面向高校学生的校园应用，首站适配华东师范大学。你可以在这里整理课程和笔记、找到常用校园服务，也可以发布自己的项目，与同学围绕作品交流。
 
-Campulse is an independent digital workbench for university students. It does not
-rebuild the systems a school already has, nor replace WeChat or the school's own
-platforms. It re-organises campus services scattered across websites, WeChat mini
-programs, native apps and official workbenches, then layers **structured campus
-transactions** and a **student developer ecosystem** on top.
+[下载 Android 预览版](https://github.com/Khk-NL/Campulse/releases/tag/campulse-preview) · [问题反馈](https://github.com/Khk-NL/Campulse/issues) · [文档导航](docs/README.md)
 
-三个方向 / three directions:
+## 学习，从一门课开始
 
-1. **校园服务统一入口** — 统一搜索、收藏、最近使用、服务发现
-2. **校园事务中心** — 把"聊天消息"变成 Announcement / Event / Task
-3. **学生开发者生态** — Campulse Store，后期 Campulse SDK 与 Plugin Runtime
+课程列表和课程表是学习的入口。进入一门课，可以集中查看笔记、资料、任务和复习内容。
 
-> 产品原则：**微信负责交流，Campulse 负责事务。**
-> WeChat handles conversation; Campulse handles transactions.
+- 通过 CSV 导入课程表，按教学周查看上课时间、教师和教室。
+- 导入 PDF 电子课本与 Markdown 笔记，在课程内阅读、整理和检索。
+- 围绕课程资料向 AI 提问，查看回答中的原文证据，生成测验、闪卡和思维导图。
+- 给复习卡片评分，由服务端 FSRS 调度下一次复习。
+- 记录待办与学习计划，完成后归档，回看已完成事项。
 
-首个落地高校为**华东师范大学（ECNU）**，但架构从一开始就与高校无关：
-**ECNU-first，Architecture-general**。
+登录后，个人课程、笔记、计划、复习卡片和学习成果通过远程服务保存。课程资料与学习记录按账号组织，设备端保留登录会话。
 
-完整规划见 [`docs/DEVELOPMENT.md`](docs/DEVELOPMENT.md)。
+## 常用校园服务，放在一起
 
----
+教务、图书馆、学校官网和校园小程序都可以进入快速访问。按分类查找、搜索或收藏，减少反复寻找入口的时间。
 
-## 仓库结构 / repository layout
+公共服务目录由管理员维护，个人收藏随账号保存。目前已录入华师大官网、图书馆、本科生院，以及校友服务大厅、体育场馆管理等小程序入口。
 
-```text
-campus/
-├── apps/
-│   ├── mobile/            Flutter 客户端（Android 首发）/ the Flutter client
-│   ├── admin/             管理后台，React + Vite / the admin console
-│   └── api/               NestJS + Prisma 后端 / the backend
-├── packages/
-│   ├── launcher/          Campulse Launcher 契约（§7）
-│   ├── models/            Campulse 领域模型（§6）
-│   ├── university-adapter/高校适配层契约（§3.2）
-│   ├── core/              校园事务与聚合逻辑（§8 / §11）
-│   ├── campus-sdk/        Campulse SDK 契约（Phase 4）
-│   └── plugin-runtime/    插件清单与权限契约（Phase 4）
-├── adapters/
-│   └── ecnu/              华东师范大学适配器（唯一允许出现 ECNU 专有逻辑的地方）
-├── scripts/
-│   ├── toolchain/         本机工具链下载与安装（见下）
-│   └── smoke/             契约冒烟测试
-├── docs/                  架构与规范文档
-└── DEVELOP_LOG.md         开发日志，每阶段追加
-```
+网页入口已完成 App 点击跳转测试。小程序使用微信 OpenSDK，直接拉起仍需完成开放平台账号资质条件及设备验收，详见下方预览版状态。
 
-**依赖方向 / dependency direction**（单向，无环）：
+## 校园 GitHub：发现项目，也参与项目
 
-```text
-@campus/launcher  →  @campus/models  →  @campus/university-adapter  →  @campus/adapter-ecnu  →  apps/api
-   纯类型              领域模型           适配契约                      ECNU 实现
-```
+校园里有同学做工具、写程序，也有同学遇到问题、提出想法。Campulse 把这些交流放在项目旁边。
 
-`@campus/launcher` 不依赖任何包，因为 `LaunchTarget` 是最低层的共享词汇。
+在“我的仓库”中创建项目，写介绍和 README，添加话题，也可以绑定已有的 GitHub 仓库。每个项目独立提交审核，并显示审核进度和处理意见。
 
----
+管理员核验华师大归属并批准上架后，项目进入校园作品、搜索和探索。其他同学可以关注项目、提出问题或建议、回复讨论；问题支持解决和重新开启。讨论与回复继承项目的访问权限，直接交流。
 
-## 技术栈 / stack
+Campulse 的项目、讨论、回复和关注记录保存在自己的数据库中。GitHub 链接用于连接外部源码仓库，社区内容由 Campulse 独立维护。
 
-| 层 | 选型 |
+下一轮社区迭代将优先完善已上架项目加入个人快速入口、消息通知和协作体验。
+
+## 面向华师大，也给后续适配留出空间
+
+首期视觉参考华东师范大学[标准色使用规范](https://www.ecnu.edu.cn/wzcd/xxgk/xxbs/bsxz/jcbf/bzssygf.htm)，界面支持主题色个性化。学校服务优先连接已有的官方入口。
+
+校方身份认证与数据接口以[华东师范大学开发者平台](https://developer.ecnu.edu.cn/)为后续对接依据，通过高校适配层处理学校之间的差异。当前账号体系由 Campulse 的 PocketBase 服务提供，校方统一认证接入列入后续计划。
+
+## 预览版状态
+
+项目处于 MVP 开发与小范围验收阶段。Android 预览版由 GitHub Actions 构建，下载页提供 APK、校验信息和对应源码提交。
+
+| 部分 | 当前进展 |
 | --- | --- |
-| 客户端 | Flutter（Android 首发，iOS 后续） |
-| 后端 | Node.js + TypeScript + NestJS |
-| 数据库 | PostgreSQL，schema 变更一律走 Prisma migration |
-| 契约 | REST + OpenAPI；跨包共享类型来自 `packages/*` |
-| 管理后台 | React + Vite |
-| 包管理 | pnpm workspaces + Turborepo |
+| 移动端与远程后端 | 已有 Android 客户端、PocketBase 数据服务及运营台；持续补齐设备操作验收 |
+| 课程与 AI 学习 | 资料导入、检索、证据问答、测验、闪卡、导图和智能体对话已有实现与部署记录；完整设备流程继续验收 |
+| 校园社区 | 已实现个人仓库、GitHub 绑定、逐项目审核、项目讨论、回复和关注；公网与客户端状态按验收记录核对 |
+| 微信小程序 | 四个入口已完成显示与实际点击测试，微信返回 `has_no_permission`；客服确认当前个人未认证账号受跳转范围限制，待资质条件满足后复测 |
+| 发布前检查 | 正式域名恢复、邮件验证与密码重置收件、微信真机跳转列入后续验收 |
 
-工程约定 / conventions:
+已完成的接口检查与实际设备点击分别记录，具体范围见[全链路验收](docs/E2E_ACCEPTANCE_20261010.md)和[快速入口测试记录](docs/QUICK_ACCESS_ACCEPTANCE_20261010.md)。上表微信资质结论来自后续客服反馈，早期测试记录保留当时现场。
 
-- 注释与文档**中英双语**；软件界面通过 i18n 提供**中英双语**
-- 代码标识符一律英文；TypeScript 侧 camelCase，数据库侧 snake_case（Prisma `@map` 映射）
-- **所有新增公共 API 必须有类型定义**，不传递未经约束的 JSON / Map
-- 安全能力默认最小权限（见 `docs/DEVELOPMENT.md` §15 / §19）
+## 一起完善 Campulse
 
----
+试用时，可以通过 [Issues](https://github.com/Khk-NL/Campulse/issues)反馈使用问题或功能建议。反馈请附 App 版本、操作步骤、预期结果和实际表现；截图注意遮挡个人信息。
 
-## 本机开发环境 / local environment
+欢迎参与客户端、校园服务整理、课程工具和社区体验的开发。提交前先阅读对应模块的实现与验收记录，让改动保持小而完整。
 
-> ⚠️ **更正 / correction**
->
-> 本节曾声称本机"Windows HTTPS / 证书 / 代理链路异常、不同网络栈表现不一致"。
-> **该说法已作废** —— 在文件沙箱改为 `danger-full-access` 之后重测，PowerShell、`curl.exe`、
-> `choco`、Java 全部正常。
->
-> This section previously claimed the machine's "Windows HTTPS / certificate / proxy chain
-> is misbehaving across network stacks". **That is retracted**: after the file sandbox moved
-> to `danger-full-access`, PowerShell, `curl.exe`, `choco` and Java all work.
+### 开发与部署资料
 
-**确实存在的坑 / pitfalls that are real:**
+当前主要运行部件是 Flutter 客户端、PocketBase 数据服务、Node.js AI 网关，以及官网和运营台。TypeScript 共享包与高校适配层提供领域模型和接口契约；早期 NestJS/Prisma 方案保留在仓库中供后续演进参考。
 
-- **`winget` 已损坏**：`winget --version` 无输出、退出码 `-1978335231`，并会以访问违例
-  `3221225477` 使作业运行器崩溃。**请勿使用。**
-  **`winget` is broken**: no output, exit `-1978335231`, and it crashes the job runner with an
-  access violation. Do not use it.
-- PATH 上的 `pnpm` 指向一个损坏的 shim（`D:\pnpm-store\v11\...` 不存在），请用
-  `D:\npm-global\pnpm.cmd`。
-  The `pnpm` on PATH is a broken shim; use `D:\npm-global\pnpm.cmd`.
+- [功能与代码架构](docs/FUNCTION_CODE_ARCHITECTURE_20261010.md)：模块位置、数据流与实现边界。
+- [项目审核流程](docs/PROJECT_REVIEW.md)：个人仓库、公开范围与管理员审核。
+- [部署与运维](docs/SERVER_OPERATIONS.md)：远程服务配置及维护记录。
+- [交接与后续任务](docs/HANDOFF_20261002.md)：接手入口和待验收事项。
+- [开源软件使用说明](docs/OPEN_SOURCE_USAGE.md)：使用的组件、参考项目与许可。
 
-工具链之所以仍由脚本安装，是为了**锁定精确版本、可复现**，而不是因为别的通道不可用：
-The toolchain is still installed by script, but to **pin exact versions reproducibly** rather
-than because other channels are unavailable:
-
-```powershell
-node scripts/toolchain/fetch-tools.mjs        # 下载；可指定 postgresql / flutter / ...
-& scripts/toolchain/install-tools.ps1         # 幂等解压到常规位置
-```
-
-已安装位置 / installed locations:
-
-| 工具 | 位置 |
-| --- | --- |
-| PostgreSQL 16.10 | `D:\pgsql` |
-| Flutter 3.47.5（Dart 3.13.4） | `D:\flutter` |
-| Android SDK cmdline-tools | `D:\Android\sdk` |
-| GitHub CLI 2.101.0 | `D:\gh` |
-
-> ⚠️ PATH 上的 `pnpm` 指向一个**损坏的 shim**（`D:\Code\dsh\...\.bin\pnpm.CMD` →
-> 不存在的 store 路径）。请使用 `D:\npm-global\pnpm.cmd`。
-> The `pnpm` on PATH is a broken shim; use `D:\npm-global\pnpm.cmd`.
->
-> ⚠️ 本 harness 的 shell 是 **Windows PowerShell 5.1**（不是 PowerShell 7）。因此仓库里的
-> `.ps1` 脚本**必须保存为带 BOM 的 UTF-8**，否则 5.1 会按 ANSI 解码，含中文的字符串会破坏
-> 脚本结构。
-> The shell here is **Windows PowerShell 5.1**, not PowerShell 7. Scripts in this repo must
-> therefore be saved as **UTF-8 with BOM**; otherwise 5.1 decodes them as ANSI and non-ASCII
-> string literals corrupt the script.
-
-### 常用命令 / common commands
-
-```powershell
-D:\npm-global\pnpm.cmd install          # 安装依赖
-D:\npm-global\pnpm.cmd build            # 构建全部包（Turborepo 负责拓扑序）
-D:\npm-global\pnpm.cmd typecheck        # 类型检查
-node scripts/smoke/contracts.smoke.cjs  # 契约冒烟测试，无需额外依赖
-
-& scripts\toolchain\postgres.ps1 ensure # 数据库未运行则拉起
-D:\npm-global\pnpm.cmd db:migrate       # 生成并应用 migration
-D:\npm-global\pnpm.cmd --filter @campus/api run build
-D:\npm-global\pnpm.cmd db:seed          # 需要先 build
-cd apps\api; node dist\src\main.js     # 启动后端
-```
-
----
-
-## 后端 API / the backend API
-
-`apps/api` —— NestJS 12 + Prisma 7 + PostgreSQL 16。启动后：
-
-- API 前缀 / prefix：`http://127.0.0.1:3000/api`
-- OpenAPI 文档 / docs：`http://127.0.0.1:3000/api/docs`
-
-| 方法 | 路径 | 说明 |
-| --- | --- | --- |
-| GET | `/api/health` | 健康检查（含数据库连通性） |
-| GET | `/api/universities` | 已接入高校 |
-| GET | `/api/universities/:id` | 单所高校 |
-| GET | `/api/universities/:id/capabilities` | 适配器能力 vs 数据库声明能力 |
-| POST | `/api/universities/:id/services/sync` | 从适配器同步服务目录（按 `sourceId` 幂等） |
-| GET | `/api/services` | 搜索服务：`universityId`（必填）、`q`、`category`、`sort` |
-| GET | `/api/services/:id` | 单个服务 |
-
-数据纪律：**`prisma/schema.prisma` 是 schema 的唯一真源**，所有变更都走 `pnpm db:migrate`
-生成 migration，禁止手工改数据库（§0.6）。Prisma 7 起连接串配置在 `apps/api/prisma.config.ts`，
-运行时通过 `@prisma/adapter-pg` 提供的 driver adapter 连接。
-
----
-
-## 当前进度 / current status
-
-**Phase 0（项目骨架）约完成 85%。** 已完成 / done:
-
-- 工具链安装并验证（PostgreSQL 16.10 / Flutter 3.47.5 / Android SDK 36 / gh 2.101.0）
-- 仓库骨架：pnpm workspaces + Turborepo + 统一 tsconfig，5 个包 `tsc` 构建通过
-- 类型契约：`@campus/launcher`、`@campus/models`、`@campus/university-adapter`、
-  `@campus/adapter-ecnu`，18 项冒烟检查全部通过
-- 数据库：`University` / `User` / `CampusService` 模型 + 首个 migration + 幂等 seed
-- 后端：7 个 REST 接口 + OpenAPI，错误处理（400/404）与同步幂等性均已端到端验证
-
-进行中 / in progress：`packages/core`、`apps/mobile`（Flutter）、`apps/admin`、`docs/` 细分文档。
-
-详细进展、决策记录与踩坑见 [`DEVELOP_LOG.md`](DEVELOP_LOG.md)。
+开发环境、运行命令与历史决策按[文档导航](docs/README.md)查阅。
