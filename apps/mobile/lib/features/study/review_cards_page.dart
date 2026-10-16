@@ -1,4 +1,5 @@
 import 'package:campus_mobile/features/study/review_card_repository.dart';
+import 'package:campus_mobile/features/study/review_session_page.dart';
 import 'package:campus_mobile/features/shared/widgets/workspace_layout.dart';
 import 'package:flutter/material.dart';
 
@@ -41,6 +42,19 @@ class _ReviewCardsPageState extends State<ReviewCardsPage> {
   void _reload() => setState(() {
     _cards = widget.repository.list(widget.courseId);
   });
+
+  Future<void> _startSession(List<ReviewCard> cards) async {
+    final queue = cards.where((card) => card.isDue(DateTime.now())).toList()
+      ..sort((a, b) => a.due.compareTo(b.due));
+    if (queue.isEmpty) return;
+    await Navigator.of(context).push<int>(
+      MaterialPageRoute(
+        builder: (_) =>
+            ReviewSessionPage(cards: queue, repository: widget.repository),
+      ),
+    );
+    if (mounted) _reload();
+  }
 
   Future<void> _edit([ReviewCard? card]) async {
     String front = card?.front ?? widget.initialFront;
@@ -238,13 +252,7 @@ class _ReviewCardsPageState extends State<ReviewCardsPage> {
               icon: Icons.style_outlined,
               actions: [
                 FilledButton.icon(
-                  onPressed: due == 0
-                      ? null
-                      : () => _review(
-                          (cards.where((card) => card.isDue(now)).toList()
-                                ..sort((a, b) => a.due.compareTo(b.due)))
-                              .first,
-                        ),
+                  onPressed: due == 0 ? null : () => _startSession(cards),
                   icon: const Icon(Icons.play_arrow_rounded),
                   label: const Text('开始复习'),
                 ),

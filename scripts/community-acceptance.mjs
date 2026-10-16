@@ -88,7 +88,8 @@ try {
   check('admin registration view follows participant ownership', ownInterests.items.some(row => row.id === interest.id) && ownInterests.items.every(row => row.owner === b.id));
   const received = await consoleClient.list('community_interests', { view: 'squareReceivedInterests', owner: a.id });
   check('admin host view includes incoming registrations', received.items.some(row => row.id === interest.id));
-  const joined = await request('community_interests', b.token, { suffix: '/records?' + new URLSearchParams({ filter: `owner = "${b.id}" && post.universityId = "ecnu" && post.kind = "sport"`, expand: 'post', perPage: '20', page: '1' }) });
+  const joinedQuery = '/records?' + new URLSearchParams({ filter: `owner = "${b.id}" && post.universityId = "ecnu" && post.kind = "sport" && post.status = "open"`, expand: 'post', perPage: '20', page: '1' });
+  const joined = await request('community_interests', b.token, { suffix: joinedQuery });
   check('joined feed uses paged owner relations with expanded posts', joined.status === 200 && joined.data.totalItems === 1 && joined.data.items[0].expand?.post?.id === post.id);
   check('admin global feed contains the published gathering', (await consoleClient.list('community_posts', { view: 'squareFeed' })).items.some(row => row.id === post.id));
   check('private interest card stays owner-only', (await get('community_profiles', b.token, profile.id)).status === 404);
@@ -103,6 +104,8 @@ try {
     check('course pin stays isolated from other accounts', (await get('user_favorites', b.token, pin.id)).status === 404);
   }
   await patch('community_posts', a.token, post.id, { status: 'closed' });
+  const closedFeed = await request('community_interests', b.token, { suffix: joinedQuery });
+  check('open-only joined feed excludes closed posts', closedFeed.status === 200 && closedFeed.data.totalItems === 0);
   check('closed post rejects new registration', (await request('community_interests', c.token, { method: 'POST', body: { owner: c.id, post: post.id, displayName: '迟到报名' } })).status !== 200);
   check('closed post rejects new discussion', (await request('community_replies', c.token, { method: 'POST', body: { owner: c.id, post: post.id, displayName: '成员', body: '迟到讨论' } })).status !== 200);
   check('participant can withdraw after closing', (await request('community_interests', b.token, { method: 'DELETE', suffix: `/records/${interest.id}` })).status === 204);

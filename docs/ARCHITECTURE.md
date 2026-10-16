@@ -55,6 +55,8 @@ Caddy（现有共享服务器的 80/443）
 | 从首页安排任务 | `home_page.dart` → 计划页 → 学习 Repository | 用户工作台快照，完成后归档；双端先保存再刷新 |
 | 搜课程、置顶和进入笔记本 | `course_hub_page.dart`、`course_notebook_view.dart` | 个人课程按 owner 读取；置顶使用 `user_favorites` 的 `courses` 分组 |
 | 查看教材、提问和生成成果 | 宽屏资料/提问/工作台三栏，手机分区切换 | 受保护附件 → AI 网关鉴权 → 用户资料 → 模型 → 用户成果 |
+| 连续复习 | `ReviewSessionPage` 固定本轮到期队列，逐张回想、评分与统计 | 复用 `ReviewCardRepository.review`，远程 FSRS 保存成功后推进；失败保留当前卡片，提交期间锁定重复操作 |
+| 整理课程资料 | 同一查询结果切换列表/卡片，支持标题/更新时间排序与复制文字 | 复用课程笔记仓库和受保护 PDF；响应式网格按行懒加载 |
 | 查服务、收藏和打开入口 | `apps_page.dart`、CampusLauncher | 管理员公共目录，收藏按用户保存；网页由系统浏览器打开 |
 | 项目发布、审核、讨论和 Star | Forge 页面与 Repository | 私有草稿 → 逐项审核 → 公共发现；讨论继承项目可见范围 |
 | 发起召集、报名和讨论 | `community_page.dart`、`community_repository.dart` | `community_posts/interests/replies`；发起人和报名者可读报名留言 |

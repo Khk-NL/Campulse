@@ -58,6 +58,7 @@ void main() {
         page: 2,
         kind: 'sport',
         campus: 'minhang',
+        status: 'open',
         query: '羽毛球',
       );
       final request = requests.single;
@@ -71,6 +72,7 @@ void main() {
         'post.universityId = "ecnu"',
         'post.kind = "sport"',
         'post.campus = "minhang"',
+        'post.status = "open"',
         'post.title ~ "羽毛球"',
       ]) {
         expect(filter, contains(clause));

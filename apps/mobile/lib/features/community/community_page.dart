@@ -43,6 +43,7 @@ class _CommunityPageState extends State<CommunityPage> {
           ? null
           : CommunityRepository(PocketBaseSession.instance!.client));
   bool people = false;
+  bool openOnly = false;
   String scope = 'all';
   String? kind, campus;
   String query = '';
@@ -78,6 +79,7 @@ class _CommunityPageState extends State<CommunityPage> {
             page: page,
             kind: kind,
             campus: campus,
+            status: openOnly ? 'open' : null,
             query: query,
             scope: scope,
           );
@@ -153,6 +155,7 @@ class _CommunityPageState extends State<CommunityPage> {
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
         children: [
           WorkspaceBanner(
+            vivid: true,
             eyebrow: 'CAMPUS TOGETHER',
             title: '把同频的人聚在一起',
             subtitle: '组一支竞赛队，约一场羽毛球，或从共同兴趣开始认识。',
@@ -220,6 +223,13 @@ class _CommunityPageState extends State<CommunityPage> {
                   selected: kind == null,
                   showCheckmark: false,
                   onSelected: (_) => change(() => kind = null),
+                ),
+                FilterChip(
+                  label: const Text('仅看召集中'),
+                  selected: openOnly,
+                  showCheckmark: false,
+                  avatar: const Icon(Icons.bolt_outlined, size: 18),
+                  onSelected: (value) => change(() => openOnly = value),
                 ),
               ],
             ),

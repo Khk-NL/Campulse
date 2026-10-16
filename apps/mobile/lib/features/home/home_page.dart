@@ -190,6 +190,7 @@ class _HomePageState extends State<HomePage> {
     final english = Localizations.localeOf(context).languageCode == 'en';
     final name = state.displayName;
     return WorkspaceBanner(
+      vivid: true,
       eyebrow: DateFormat(
         'MMM d · EEEE',
         english ? 'en' : 'zh',

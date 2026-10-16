@@ -60,6 +60,7 @@ class FakeCommunity extends CommunityRepository {
     int page = 1,
     String? kind,
     String? campus,
+    String? status,
     String query = '',
     String scope = 'all',
   }) async {
@@ -70,6 +71,7 @@ class FakeCommunity extends CommunityRepository {
             (p) =>
                 (kind == null || p.getStringValue('kind') == kind) &&
                 (campus == null || p.getStringValue('campus') == campus) &&
+                (status == null || p.getStringValue('status') == status) &&
                 p.getStringValue('title').contains(query) &&
                 (scope != 'mine' || p.getStringValue('owner') == userId) &&
                 (scope != 'joined' ||
@@ -279,6 +281,35 @@ void main() {
       expect(tester.takeException(), isNull);
     },
   );
+
+  testWidgets('open gatherings filter hides closed posts and can be cleared', (
+    tester,
+  ) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(600, 1500);
+    addTearDown(tester.view.reset);
+    final repo = FakeCommunity();
+    repo.entries.add(
+      record('closed', {
+        'owner': 'host',
+        'title': '已经结束的约局',
+        'kind': 'sport',
+        'status': 'closed',
+      }),
+    );
+    await tester.pumpWidget(
+      wrap(await state(), Scaffold(body: CommunityPage(repository: repo))),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('已经结束的约局'), findsOneWidget);
+    await tester.tap(find.text('仅看召集中'));
+    await tester.pumpAndSettle();
+    expect(find.text('已经结束的约局'), findsNothing);
+    expect(find.text('周末羽毛球'), findsOneWidget);
+    await tester.tap(find.text('仅看召集中'));
+    await tester.pumpAndSettle();
+    expect(find.text('已经结束的约局'), findsOneWidget);
+  });
 
   testWidgets('campus square filters types and publishes an actual row', (
     tester,

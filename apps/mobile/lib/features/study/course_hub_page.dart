@@ -150,6 +150,7 @@ class _CourseHubPageState extends State<CourseHubPage> {
           _viewSwitcher(),
           const SizedBox(height: 12),
           WorkspaceBanner(
+            vivid: true,
             eyebrow: 'LEARNING LIBRARY',
             title: _text('我的课程', 'My courses'),
             subtitle: _text(

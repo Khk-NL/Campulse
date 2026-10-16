@@ -9,6 +9,7 @@ class WorkspaceBanner extends StatelessWidget {
     required this.subtitle,
     required this.icon,
     this.actions = const [],
+    this.vivid = false,
   });
 
   final String eyebrow;
@@ -16,6 +17,7 @@ class WorkspaceBanner extends StatelessWidget {
   final String subtitle;
   final IconData icon;
   final List<Widget> actions;
+  final bool vivid;
 
   @override
   Widget build(BuildContext context) {
@@ -34,79 +36,130 @@ class WorkspaceBanner extends StatelessWidget {
           child: child,
         ),
       ),
-      child: Container(
-        padding: EdgeInsets.all(
-          MediaQuery.sizeOf(context).height < 600 ? 14 : 20,
-        ),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(
-            color: colors.outlineVariant.withValues(alpha: .6),
-          ),
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              colors.surface,
-              Color.alphaBlend(
-                colors.secondaryContainer.withValues(alpha: .35),
-                colors.surface,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(20),
+        child: CustomPaint(
+          foregroundPainter: vivid
+              ? _OrbitPainter(colors.primary, colors.tertiary)
+              : null,
+          child: Container(
+            padding: EdgeInsets.all(
+              MediaQuery.sizeOf(context).height < 600 ? 14 : 20,
+            ),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(
+                color: colors.outlineVariant.withValues(alpha: .6),
               ),
-            ],
-          ),
-        ),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    eyebrow,
-                    style: theme.textTheme.labelSmall?.copyWith(
-                      color: colors.primary,
-                      letterSpacing: 1.5,
-                      fontWeight: FontWeight.w700,
-                    ),
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  vivid
+                      ? Color.alphaBlend(
+                          colors.primaryContainer.withValues(alpha: .55),
+                          colors.surface,
+                        )
+                      : colors.surface,
+                  Color.alphaBlend(
+                    colors.secondaryContainer.withValues(alpha: .35),
+                    colors.surface,
                   ),
-                  const SizedBox(height: 6),
-                  Text(
-                    title,
-                    style: theme.textTheme.headlineSmall?.copyWith(
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    subtitle,
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      color: colors.onSurfaceVariant,
-                    ),
-                  ),
-                  if (actions.isNotEmpty) ...[
-                    const SizedBox(height: 16),
-                    Wrap(spacing: 8, runSpacing: 8, children: actions),
-                  ],
                 ],
               ),
             ),
-            const SizedBox(width: 12),
-            DecoratedBox(
-              decoration: BoxDecoration(
-                color: colors.primaryContainer.withValues(alpha: .5),
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: Padding(
-                padding: const EdgeInsets.all(12),
-                child: Icon(icon, color: colors.primary, size: 28),
-              ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        eyebrow,
+                        style: theme.textTheme.labelSmall?.copyWith(
+                          color: colors.primary,
+                          letterSpacing: 1.5,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        title,
+                        style: theme.textTheme.headlineSmall?.copyWith(
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        subtitle,
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: colors.onSurfaceVariant,
+                        ),
+                      ),
+                      if (actions.isNotEmpty) ...[
+                        const SizedBox(height: 16),
+                        Wrap(spacing: 8, runSpacing: 8, children: actions),
+                      ],
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 12),
+                DecoratedBox(
+                  decoration: BoxDecoration(
+                    color: colors.primaryContainer.withValues(alpha: .5),
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.all(12),
+                    child: Icon(icon, color: colors.primary, size: 28),
+                  ),
+                ),
+              ],
             ),
-          ],
+          ),
         ),
       ),
     );
   }
+}
+
+/// Static geometry gets repainted only when the theme changes.
+class _OrbitPainter extends CustomPainter {
+  const _OrbitPainter(this.primary, this.secondary);
+  final Color primary, secondary;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    canvas.save();
+    canvas.clipRect(Offset.zero & size);
+    final center = Offset(size.width + 18, size.height + 30);
+    final radius = size.height * .95;
+    final paint = Paint()
+      ..color = secondary.withValues(alpha: .13)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1;
+    for (final factor in [.65, 1.0, 1.35]) {
+      canvas.drawCircle(center, radius * factor, paint);
+    }
+    final halo = Paint()
+      ..shader = RadialGradient(
+        colors: [primary.withValues(alpha: .12), primary.withValues(alpha: 0)],
+      ).createShader(Rect.fromCircle(center: center, radius: radius * 1.8));
+    canvas.drawCircle(center, radius * 1.8, halo);
+    for (var i = 0; i < 5; i++) {
+      canvas.drawCircle(
+        Offset(size.width - 18 - i * 13, size.height - 15),
+        1.5,
+        Paint()..color = primary.withValues(alpha: .25),
+      );
+    }
+    canvas.restore();
+  }
+
+  @override
+  bool shouldRepaint(_OrbitPainter oldDelegate) =>
+      oldDelegate.primary != primary || oldDelegate.secondary != secondary;
 }
 
 /// A real action, with one shared hover/focus treatment across entry points.
@@ -140,6 +193,7 @@ class _WorkspaceActionState extends State<WorkspaceAction> {
     final accent = widget.color ?? theme.colorScheme.primary;
     final highlighted = _hovered || _focused || widget.selected;
     return AnimatedContainer(
+      transform: Matrix4.translationValues(0, _hovered ? -2 : 0, 0),
       duration: MediaQuery.disableAnimationsOf(context)
           ? Duration.zero
           : const Duration(milliseconds: 160),

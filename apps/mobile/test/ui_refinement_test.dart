@@ -18,7 +18,9 @@ import 'package:shared_preferences/shared_preferences.dart';
 const previewKey = ValueKey('ui-preview');
 Widget surface(Widget child, {bool dark = false}) => MaterialApp(
   theme: previewTheme(dark),
-  home: RepaintBoundary(key: previewKey, child: child),
+  builder: (context, navigator) =>
+      RepaintBoundary(key: previewKey, child: navigator!),
+  home: child,
 );
 ThemeData previewTheme(bool dark) {
   final theme = dark ? CampusTheme.dark() : CampusTheme.light();
@@ -164,6 +166,21 @@ void main() {
     );
     await tester.pumpAndSettle();
     await capture(tester, 'sources-desktop');
+    await tester.tap(find.byTooltip('卡片视图'));
+    await tester.pumpAndSettle();
+    expect(find.text('线性代数教材'), findsOneWidget);
+    expect(find.text('课堂思考'), findsOneWidget);
+    await capture(tester, 'sources-cards');
+    await tester.tap(find.byTooltip('列表视图'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('资料排序'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('标题排序'));
+    await tester.pumpAndSettle();
+    expect(
+      tester.getTopLeft(find.text('线性代数教材')).dy,
+      lessThan(tester.getTopLeft(find.text('课堂思考')).dy),
+    );
     await tester.tap(find.widgetWithText(ChoiceChip, 'PDF 教材'));
     await tester.pumpAndSettle();
     expect(find.text('线性代数教材'), findsOneWidget);
@@ -177,7 +194,7 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('due card view starts the actual earliest review dialog', (
+  testWidgets('due card view starts the actual earliest review session', (
     tester,
   ) async {
     viewport(tester, const Size(600, 1100));
@@ -210,6 +227,54 @@ void main() {
     await tester.tap(find.text('显示答案'));
     await tester.pumpAndSettle();
     expect(find.text('解释和例子'), findsOneWidget);
+    await capture(tester, 'review-session');
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('library card actions copy the actual note as Markdown', (
+    tester,
+  ) async {
+    viewport(tester, const Size(900, 1000));
+    String? copied;
+    tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+      SystemChannels.platform,
+      (call) async {
+        if (call.method == 'Clipboard.setData') {
+          copied = (call.arguments as Map)['text'] as String;
+        }
+        return null;
+      },
+    );
+    addTearDown(
+      () => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+        SystemChannels.platform,
+        null,
+      ),
+    );
+    final repo = LocalCourseNoteRepository(
+      await SharedPreferences.getInstance(),
+    );
+    await repo.save(
+      CourseNote(
+        id: 'copy',
+        courseId: 'course',
+        title: '复习提纲',
+        content: '重点一\n重点二',
+        updatedAt: DateTime.now(),
+      ),
+    );
+    await tester.pumpWidget(
+      surface(CourseNotesPage(courseId: 'course', repository: repo)),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('卡片视图'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('资料操作'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('复制文字'));
+    await tester.pumpAndSettle();
+    expect(copied, '# 复习提纲\n\n重点一\n重点二');
+    expect(find.text('文字已复制'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 

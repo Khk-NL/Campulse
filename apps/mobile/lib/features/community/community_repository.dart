@@ -17,6 +17,7 @@ class CommunityRepository {
     int page = 1,
     String? kind,
     String? campus,
+    String? status,
     String query = '',
     String scope = 'all',
   }) async {
@@ -35,6 +36,7 @@ class CommunityRepository {
               if (scope == 'mine' || joined) 'owner = {:owner}',
               if (kind != null) '${prefix}kind = {:kind}',
               if (campus != null) '${prefix}campus = {:campus}',
+              if (status != null) '${prefix}status = {:status}',
               if (query.trim().isNotEmpty)
                 '(${prefix}title ~ {:query} || ${prefix}body ~ {:query} || ${prefix}tags ~ {:query})',
             ].join(' && '),
@@ -43,6 +45,7 @@ class CommunityRepository {
               'university': universityId,
               'kind': kind,
               'campus': campus,
+              'status': status,
               'query': query.trim(),
             },
           ),

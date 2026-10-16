@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'dart:typed_data';
 
 import 'package:campus_mobile/features/study/course_note_repository.dart';
 import 'package:campus_mobile/features/study/pdf_text_extraction.dart';
@@ -8,6 +7,7 @@ import 'package:campus_mobile/features/study/review_cards_page.dart';
 import 'package:campus_mobile/features/shared/widgets/workspace_layout.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:path/path.dart' as path;
 import 'package:pdfrx/pdfrx.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -32,6 +32,7 @@ class _CourseNotesPageState extends State<CourseNotesPage> {
   bool _importing = false;
   String _query = '';
   int _kind = 0;
+  bool _cardsView = false, _sortByTitle = false;
   late Future<List<CourseNote>> _notes = widget.repository.list(
     widget.courseId,
   );
@@ -233,148 +234,213 @@ class _CourseNotesPageState extends State<CourseNotesPage> {
                       ),
                 )
                 .toList()
-              ..sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
+              ..sort(
+                (a, b) => _sortByTitle
+                    ? a.title.compareTo(b.title)
+                    : b.updatedAt.compareTo(a.updatedAt),
+              );
         return RefreshIndicator(
           onRefresh: () async {
             _reload();
             await _notes;
           },
-          child: ListView.builder(
-            padding: const EdgeInsets.fromLTRB(12, 8, 12, 88),
-            itemCount: notes.length + 1,
-            itemBuilder: (BuildContext context, int index) {
-              if (index == 0) {
-                return Padding(
-                  padding: const EdgeInsets.only(bottom: 16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      WorkspaceBanner(
-                        eyebrow: 'COURSE COLLECTION',
-                        title: '资料与笔记',
-                        subtitle: '教材、课堂摘录和自己的思考，集中整理。',
-                        icon: Icons.auto_stories_outlined,
-                      ),
-                      const SizedBox(height: 12),
-                      WorkspaceGrid(
-                        minWidth: 170,
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final columns = _cardsView
+                  ? ((constraints.maxWidth - 24) / 270).floor().clamp(
+                      1,
+                      notes.length.clamp(1, 3),
+                    )
+                  : 1;
+              return ListView.builder(
+                padding: const EdgeInsets.fromLTRB(12, 8, 12, 88),
+                itemCount: (notes.length / columns).ceil() + 1,
+                itemBuilder: (BuildContext context, int index) {
+                  if (index == 0) {
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
-                          WorkspaceMetric(
-                            value:
-                                '${allNotes.where((note) => note.hasPdf).length}',
-                            label: 'PDF 教材',
-                            icon: Icons.picture_as_pdf_outlined,
-                            color: Theme.of(context).colorScheme.tertiary,
+                          WorkspaceBanner(
+                            eyebrow: 'COURSE COLLECTION',
+                            title: '资料与笔记',
+                            subtitle: '教材、课堂摘录和自己的思考，集中整理。',
+                            icon: Icons.auto_stories_outlined,
                           ),
-                          WorkspaceMetric(
-                            value:
-                                '${allNotes.where((note) => !note.hasPdf).length}',
-                            label: '文字笔记',
-                            icon: Icons.edit_note_rounded,
-                            color: Theme.of(context).colorScheme.secondary,
+                          const SizedBox(height: 12),
+                          WorkspaceGrid(
+                            minWidth: 170,
+                            children: [
+                              WorkspaceMetric(
+                                value:
+                                    '${allNotes.where((note) => note.hasPdf).length}',
+                                label: 'PDF 教材',
+                                icon: Icons.picture_as_pdf_outlined,
+                                color: Theme.of(context).colorScheme.tertiary,
+                              ),
+                              WorkspaceMetric(
+                                value:
+                                    '${allNotes.where((note) => !note.hasPdf).length}',
+                                label: '文字笔记',
+                                icon: Icons.edit_note_rounded,
+                                color: Theme.of(context).colorScheme.secondary,
+                              ),
+                            ],
                           ),
-                        ],
-                      ),
-                      const SizedBox(height: 14),
-                      TextField(
-                        decoration: const InputDecoration(
-                          labelText: '查找资料',
-                          hintText: '搜索标题或正文…',
-                          prefixIcon: Icon(Icons.search),
-                        ),
-                        onChanged: (value) =>
-                            setState(() => _query = value.trim()),
-                      ),
-                      const SizedBox(height: 12),
-                      Wrap(
-                        spacing: 8,
-                        runSpacing: 8,
-                        children: [
-                          for (final entry in const {
-                            0: '全部资料',
-                            1: 'PDF 教材',
-                            2: '文字笔记',
-                          }.entries)
-                            ChoiceChip(
-                              showCheckmark: false,
-                              label: Text(entry.value),
-                              selected: _kind == entry.key,
-                              onSelected: (_) =>
-                                  setState(() => _kind = entry.key),
+                          const SizedBox(height: 14),
+                          TextField(
+                            decoration: const InputDecoration(
+                              labelText: '查找资料',
+                              hintText: '搜索标题或正文…',
+                              prefixIcon: Icon(Icons.search),
+                            ),
+                            onChanged: (value) =>
+                                setState(() => _query = value.trim()),
+                          ),
+                          const SizedBox(height: 12),
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 8,
+                            children: [
+                              for (final entry in const {
+                                0: '全部资料',
+                                1: 'PDF 教材',
+                                2: '文字笔记',
+                              }.entries)
+                                ChoiceChip(
+                                  showCheckmark: false,
+                                  label: Text(entry.value),
+                                  selected: _kind == entry.key,
+                                  onSelected: (_) =>
+                                      setState(() => _kind = entry.key),
+                                ),
+                            ],
+                          ),
+                          const SizedBox(height: 10),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  '${notes.length} 份资料',
+                                  style: Theme.of(context).textTheme.labelLarge,
+                                ),
+                              ),
+                              IconButton(
+                                tooltip: '列表视图',
+                                isSelected: !_cardsView,
+                                onPressed: () =>
+                                    setState(() => _cardsView = false),
+                                icon: const Icon(Icons.view_agenda_outlined),
+                                selectedIcon: const Icon(Icons.view_agenda),
+                              ),
+                              IconButton(
+                                tooltip: '卡片视图',
+                                isSelected: _cardsView,
+                                onPressed: () =>
+                                    setState(() => _cardsView = true),
+                                icon: const Icon(Icons.grid_view_outlined),
+                                selectedIcon: const Icon(
+                                  Icons.grid_view_rounded,
+                                ),
+                              ),
+                              PopupMenuButton<bool>(
+                                tooltip: '资料排序',
+                                initialValue: _sortByTitle,
+                                icon: const Icon(Icons.sort),
+                                onSelected: (value) =>
+                                    setState(() => _sortByTitle = value),
+                                itemBuilder: (_) => const [
+                                  PopupMenuItem(
+                                    value: false,
+                                    child: Text('最近更新'),
+                                  ),
+                                  PopupMenuItem(
+                                    value: true,
+                                    child: Text('标题排序'),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                          if (notes.isEmpty)
+                            Padding(
+                              padding: const EdgeInsets.all(24),
+                              child: Text(
+                                allNotes.isEmpty ? '导入教材或新建笔记' : '试试其他关键词或资料类型',
+                              ),
                             ),
                         ],
                       ),
-                      if (notes.isEmpty)
-                        Padding(
-                          padding: const EdgeInsets.all(24),
-                          child: Text(
-                            allNotes.isEmpty ? '导入教材或新建笔记' : '试试其他关键词或资料类型',
+                    );
+                  }
+                  if (_cardsView) {
+                    final start = (index - 1) * columns;
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          for (var column = 0; column < columns; column++) ...[
+                            if (column > 0) const SizedBox(width: 12),
+                            Expanded(
+                              child: start + column < notes.length
+                                  ? _noteCard(notes[start + column])
+                                  : const SizedBox.shrink(),
+                            ),
+                          ],
+                        ],
+                      ),
+                    );
+                  }
+                  final CourseNote note = notes[index - 1];
+                  return TweenAnimationBuilder<double>(
+                    key: ValueKey<String>(note.id),
+                    tween: Tween<double>(begin: 0, end: 1),
+                    duration: MediaQuery.disableAnimationsOf(context)
+                        ? Duration.zero
+                        : const Duration(milliseconds: 220),
+                    builder:
+                        (BuildContext context, double value, Widget? child) =>
+                            Opacity(
+                              opacity: value,
+                              child: Transform.translate(
+                                offset: Offset(0, 8 * (1 - value)),
+                                child: child,
+                              ),
+                            ),
+                    child: Padding(
+                      padding: const EdgeInsets.only(bottom: 10),
+                      child: Card(
+                        child: ListTile(
+                          title: Text(note.title),
+                          subtitle: Text(
+                            '${note.hasPdf ? 'PDF 教材' : '文字笔记'} · ${MaterialLocalizations.of(context).formatCompactDate(note.updatedAt.toLocal())}\n${note.content}',
+                            maxLines: 3,
+                            overflow: TextOverflow.ellipsis,
                           ),
-                        ),
-                    ],
-                  ),
-                );
-              }
-              final CourseNote note = notes[index - 1];
-              return TweenAnimationBuilder<double>(
-                key: ValueKey<String>(note.id),
-                tween: Tween<double>(begin: 0, end: 1),
-                duration: MediaQuery.disableAnimationsOf(context)
-                    ? Duration.zero
-                    : const Duration(milliseconds: 220),
-                builder: (BuildContext context, double value, Widget? child) =>
-                    Opacity(
-                      opacity: value,
-                      child: Transform.translate(
-                        offset: Offset(0, 8 * (1 - value)),
-                        child: child,
-                      ),
-                    ),
-                child: Padding(
-                  padding: const EdgeInsets.only(bottom: 10),
-                  child: Card(
-                    child: ListTile(
-                      title: Text(note.title),
-                      subtitle: Text(
-                        '${note.hasPdf ? 'PDF 教材' : '文字笔记'} · ${MaterialLocalizations.of(context).formatCompactDate(note.updatedAt.toLocal())}\n${note.content}',
-                        maxLines: 3,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      leading: CircleAvatar(
-                        backgroundColor: note.hasPdf
-                            ? Theme.of(context).colorScheme.tertiaryContainer
-                            : Theme.of(context).colorScheme.secondaryContainer,
-                        child: Icon(
-                          note.hasPdf
-                              ? Icons.picture_as_pdf_outlined
-                              : Icons.description_outlined,
+                          leading: CircleAvatar(
+                            backgroundColor: note.hasPdf
+                                ? Theme.of(context)
+                                      .colorScheme
+                                      .tertiaryContainer
+                                : Theme.of(context)
+                                      .colorScheme
+                                      .secondaryContainer,
+                            child: Icon(
+                              note.hasPdf
+                                  ? Icons.picture_as_pdf_outlined
+                                  : Icons.description_outlined,
+                            ),
+                          ),
+                          onTap: () =>
+                              note.hasPdf ? _openPdf(note) : _edit(note),
+                          trailing: _noteActions(note),
                         ),
                       ),
-                      onTap: () => note.hasPdf ? _openPdf(note) : _edit(note),
-                      trailing: PopupMenuButton<String>(
-                        onSelected: (String action) {
-                          if (action == 'card') {
-                            _openCards(note);
-                          }
-                          if (action == 'delete') {
-                            _delete(note);
-                          }
-                        },
-                        itemBuilder: (BuildContext context) =>
-                            const <PopupMenuEntry<String>>[
-                              PopupMenuItem<String>(
-                                value: 'card',
-                                child: Text('制作复习卡片'),
-                              ),
-                              PopupMenuItem<String>(
-                                value: 'delete',
-                                child: Text('删除笔记'),
-                              ),
-                            ],
-                      ),
                     ),
-                  ),
-                ),
+                  );
+                },
               );
             },
           ),
@@ -382,6 +448,108 @@ class _CourseNotesPageState extends State<CourseNotesPage> {
       },
     ),
   );
+
+  PopupMenuButton<String> _noteActions(CourseNote note) =>
+      PopupMenuButton<String>(
+        tooltip: '资料操作',
+        onSelected: (action) async {
+          if (action == 'card') await _openCards(note);
+          if (action == 'delete') await _delete(note);
+          if (action == 'copy') {
+            try {
+              await Clipboard.setData(
+                ClipboardData(text: '# ${note.title}\n\n${note.content}'),
+              );
+              if (mounted) {
+                ScaffoldMessenger.of(context)
+                    .showSnackBar(const SnackBar(content: Text('文字已复制')));
+              }
+            } on Exception {
+              if (mounted) {
+                ScaffoldMessenger.of(context)
+                    .showSnackBar(const SnackBar(content: Text('复制失败，请重试')));
+              }
+            }
+          }
+        },
+        itemBuilder: (_) => const [
+          PopupMenuItem(value: 'card', child: Text('制作复习卡片')),
+          PopupMenuItem(value: 'copy', child: Text('复制文字')),
+          PopupMenuItem(value: 'delete', child: Text('删除笔记')),
+        ],
+      );
+
+  Widget _noteCard(CourseNote note) {
+    final theme = Theme.of(context);
+    final accent = note.hasPdf
+        ? theme.colorScheme.tertiary
+        : theme.colorScheme.secondary;
+    return Card(
+      clipBehavior: Clip.antiAlias,
+      child: Ink(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              Color.alphaBlend(
+                accent.withValues(alpha: .1),
+                theme.colorScheme.surface,
+              ),
+              theme.colorScheme.surface,
+            ],
+          ),
+        ),
+        child: InkWell(
+          onTap: () => note.hasPdf ? _openPdf(note) : _edit(note),
+          child: Container(
+            constraints: const BoxConstraints(minHeight: 235),
+            padding: const EdgeInsets.all(18),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(
+                      note.hasPdf
+                          ? Icons.picture_as_pdf_outlined
+                          : Icons.description_outlined,
+                      color: accent,
+                      size: 28,
+                    ),
+                    const Spacer(),
+                    _noteActions(note),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  note.title,
+                  style: theme.textTheme.titleMedium,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 10),
+                Text(
+                  note.content.isEmpty
+                      ? (note.hasPdf ? '打开教材，继续阅读' : '打开笔记，继续整理')
+                      : note.content,
+                  maxLines: 4,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.textTheme.bodySmall,
+                ),
+                const SizedBox(height: 20),
+                Text(
+                  MaterialLocalizations.of(context)
+                      .formatMediumDate(note.updatedAt.toLocal()),
+                  style: theme.textTheme.labelSmall?.copyWith(color: accent),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 class _PdfNotePage extends StatefulWidget {
