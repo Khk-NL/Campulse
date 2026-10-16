@@ -3,12 +3,15 @@ import 'dart:async';
 import 'package:pocketbase/pocketbase.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
+import 'config/browser_endpoints.dart';
+
 /// 保存普通用户会话到系统安全存储，不保存密码或学校凭据。
 class PocketBaseSession {
   PocketBaseSession(String baseUrl, {AuthStore? authStore})
     : client = PocketBase(baseUrl, authStore: authStore);
 
-  static const String baseUrl = String.fromEnvironment('POCKETBASE_URL');
+  static String get baseUrl =>
+      browserEndpoint('/', const String.fromEnvironment('POCKETBASE_URL'));
   static PocketBaseSession? _instance;
   static PocketBaseSession? get instance => _instance;
 

@@ -8,6 +8,8 @@
 /// at a local, test or production backend.
 library;
 
+import 'browser_endpoints.dart';
+
 /// 不可变的应用配置 / immutable app configuration.
 class AppConfig {
   const AppConfig({
@@ -71,18 +73,18 @@ class AppConfig {
     defaultValue: '',
   );
 
-  static const String configuredEduWorkGatewayUrl = String.fromEnvironment(
-    'CAMPUS_EDUWORK_GATEWAY_URL',
-    defaultValue: '',
+  static String get configuredEduWorkGatewayUrl => browserEndpoint(
+    '/ai',
+    const String.fromEnvironment('CAMPUS_EDUWORK_GATEWAY_URL'),
   );
 
   /// 默认配置。可用 `--dart-define` 覆盖任意一项。
   /// The default configuration; any field can be overridden with `--dart-define`.
   factory AppConfig.defaults() {
-    return const AppConfig(
+    return AppConfig(
       apiBaseUrl: configuredApiBaseUrl,
       appVersion: configuredAppVersion,
-      requestTimeout: Duration(seconds: 5),
+      requestTimeout: const Duration(seconds: 5),
       weChatAppId: configuredWeChatAppId,
       eduWorkGatewayUrl: configuredEduWorkGatewayUrl,
     );

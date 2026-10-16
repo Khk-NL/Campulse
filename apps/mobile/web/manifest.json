@@ -1,0 +1,11 @@
+{
+  "name": "Campulse · 校园工作台",
+  "short_name": "Campulse",
+  "start_url": ".",
+  "scope": ".",
+  "display": "standalone",
+  "background_color": "#f7f6f3",
+  "theme_color": "#A41F35",
+  "description": "课程、笔记、复习与校园项目社区",
+  "icons": [{ "src": "icon.png", "sizes": "512x512", "type": "image/png", "purpose": "any" }]
+}

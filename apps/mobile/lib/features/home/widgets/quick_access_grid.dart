@@ -76,11 +76,11 @@ class _QuickAccessGridState extends State<QuickAccessGrid> {
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
               itemCount: widget.services.length,
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 2,
+              gridDelegate: SliverGridDelegateWithMaxCrossAxisExtent(
+                maxCrossAxisExtent: 320,
                 mainAxisSpacing: 10,
                 crossAxisSpacing: 10,
-                childAspectRatio: 2.6,
+                mainAxisExtent: MediaQuery.textScalerOf(context).scale(52) + 24,
               ),
               itemBuilder: (BuildContext context, int index) {
                 final CampusService service = widget.services[index];

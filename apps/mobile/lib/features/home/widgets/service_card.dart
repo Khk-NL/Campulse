@@ -36,10 +36,17 @@ class ServiceCard extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
           child: Row(
             children: <Widget>[
-              Icon(
-                _iconFor(service),
-                size: 20,
-                color: theme.colorScheme.primary,
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.primaryContainer,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(
+                  _iconFor(service),
+                  size: 20,
+                  color: theme.colorScheme.onPrimaryContainer,
+                ),
               ),
               const SizedBox(width: 10),
               Expanded(
@@ -47,8 +54,9 @@ class ServiceCard extends StatelessWidget {
                   label,
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
-                  style: theme.textTheme.bodyMedium
-                      ?.copyWith(fontWeight: FontWeight.w600),
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
               ),
             ],

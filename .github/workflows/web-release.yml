@@ -1,0 +1,51 @@
+name: Campulse Web release
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'apps/mobile/**'
+      - 'scripts/serve-web*'
+      - '.github/workflows/web-release.yml'
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: campulse-web-main
+  cancel-in-progress: true
+jobs:
+  web:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.47.5'
+          channel: stable
+          cache: true
+      - name: Verify shared client and web proxy
+        run: |
+          node --test scripts/serve-web.test.mjs
+          cd apps/mobile
+          flutter pub get --enforce-lockfile
+          flutter analyze
+          flutter test
+      - name: Build same-origin browser workspace
+        working-directory: apps/mobile
+        run: |
+          VERSION=$(sed -n 's/^version: \([^+]*\).*/\1/p' pubspec.yaml)
+          flutter build web --release --base-href=/app/ --no-web-resources-cdn --no-wasm-dry-run --dart-define-from-file=config/web.json --dart-define=CAMPUS_APP_VERSION="$VERSION"
+          printf '{"sourceCommit":"%s","version":"%s","basePath":"/app/"}\n' "$GITHUB_SHA" "$VERSION" > build/web/version.json
+      - name: Publish browser bundle
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cd apps/mobile/build/web
+          zip -qr "$GITHUB_WORKSPACE/Campulse-Web.zip" .
+          cd "$GITHUB_WORKSPACE"
+          sha256sum Campulse-Web.zip > Campulse-Web.zip.sha256
+          gh release view campulse-web-preview >/dev/null 2>&1 || gh release create campulse-web-preview --prerelease --title 'Campulse Web 预览版' --notes '浏览器工作台，部署在 /app/，连接同源 PocketBase 与 AI 服务。'
+          gh release upload campulse-web-preview Campulse-Web.zip Campulse-Web.zip.sha256 apps/mobile/build/web/version.json --clobber

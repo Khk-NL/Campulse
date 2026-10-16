@@ -1,11 +1,13 @@
 # 系统架构
 
-更新：2026-10-16。当前产品由 Flutter Android / Windows 客户端、PocketBase、Node.js AI 网关和静态官网/运营台组成。
+更新：2026-10-16。当前产品由 Flutter Android / Windows / Web 客户端、PocketBase、Node.js AI 网关和静态官网/运营台组成。
+
+Web 使用 `/app/` 子路径，同源 `/api/` 与 `/ai/` 连接现有服务。`config/web.json` 选择浏览器 origin，本机代理与线上静态站点可复用同一 bundle。原生本地 PDF 文件访问通过条件导入隔离；Web 的 PDF 使用已登录用户的 PocketBase 附件仓库。微信原生注册限定在 Android。构建、调试及发布见[Web 说明](WEB.md)。
 
 ## 运行路径
 
 ```text
-Flutter Android / Windows（共享 Dart 业务层）
+Flutter Android / Windows / Web（共享 Dart 业务层）
  ├─ PocketBase HTTPS API → 账号、课程、笔记、计划、收藏、社区
  ├─ /ai/v1/* → Node 网关 → EduWork 核心模块 + ChatECNU
  └─ CampusLauncher → 外部网页 / 微信 OpenSDK
@@ -14,7 +16,7 @@ Caddy（现有共享服务器的 80/443）
  ├─ /ai/* → 127.0.0.1:8787（去掉 /ai 前缀）
  └─ 其他路径 → 127.0.0.1:8090
                   ├─ PocketBase API 与受保护附件
-                  └─ pb_public：官网与运营台
+                  └─ pb_public：官网、运营台、/app/ 浏览器工作台
 ```
 
 当前 APK 公开地址见 `apps/mobile/config/eduwork.production.example.json`，仍使用临时域名。正式域名切换按[域名恢复](DOMAIN_FILING.md)执行。

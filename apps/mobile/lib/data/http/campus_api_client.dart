@@ -14,7 +14,6 @@ library;
 // ignore_for_file: prefer_initializing_formals
 import 'dart:async';
 import 'dart:convert';
-import 'dart:io';
 
 import 'package:campus_mobile/core/config/app_config.dart';
 import 'package:http/http.dart' as http;
@@ -209,8 +208,6 @@ class CampusApiClient {
       rethrow;
     } on TimeoutException catch (error) {
       throw CampusApiException('Request timed out: $error', uri: uri);
-    } on SocketException catch (error) {
-      throw CampusApiException('Socket error: ${error.message}', uri: uri);
     } on http.ClientException catch (error) {
       throw CampusApiException('Client error: ${error.message}', uri: uri);
     } on FormatException catch (error) {

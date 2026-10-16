@@ -36,6 +36,7 @@ import 'package:campus_mobile/features/home/home_page.dart';
 import 'package:campus_mobile/features/profile/profile_page.dart';
 import 'package:campus_mobile/features/study/course_hub_page.dart';
 import 'package:campus_mobile/features/shared/widgets/offline_banner.dart';
+import 'package:campus_mobile/features/shared/widgets/workspace_layout.dart';
 import 'package:campus_mobile/features/shell/shell_routes.dart';
 import 'package:campus_mobile/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
@@ -202,76 +203,144 @@ class _AppShellState extends State<AppShell>
               const SizedBox(width: 4),
             ],
           ),
-          body: Row(
-            children: [
-              if (desktop) ...[
-                NavigationRail(
-                  extended: MediaQuery.sizeOf(context).width >= 1250,
-                  selectedIndex: _index,
-                  onDestinationSelected: _select,
-                  leading: const Padding(
-                    padding: EdgeInsets.symmetric(vertical: 18),
-                    child: Text(
-                      'CAMPULSE',
-                      style: TextStyle(fontWeight: FontWeight.w800),
-                    ),
-                  ),
-                  destinations: [
-                    for (int i = 0; i < labels.length; i++)
-                      NavigationRailDestination(
-                        icon: Icon(icons[i]),
-                        label: Text(labels[i]),
+          body: WorkspaceCanvas(
+            child: Row(
+              children: [
+                if (desktop) ...[
+                  Container(
+                    margin: const EdgeInsets.fromLTRB(12, 12, 4, 12),
+                    clipBehavior: Clip.antiAlias,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(26),
+                      border: Border.all(
+                        color: Theme.of(context).colorScheme.primary
+                            .withValues(alpha: .14),
                       ),
-                  ],
-                ),
-                const VerticalDivider(width: 1),
-              ],
-              Expanded(
-                child: Align(
-                  alignment: Alignment.topCenter,
-                  child: ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 1560),
-                    child: Column(
-                      children: <Widget>[
-                        // 离线横幅只在整个后端都不可达时出现；若只是某些接口还没上线，
-                        // 由各区块自己的"演示数据"标记如实说明（见 home_page.dart）。
-                        // The offline banner appears only when the whole backend is unreachable; when
-                        // merely some endpoints are missing, each block states it with its own demo
-                        // badge instead (see home_page.dart).
-                        const OfflineBanner(),
-                        Expanded(
-                          child: FadeTransition(
-                            opacity: Tween<double>(
-                              begin: .82,
-                              end: 1,
-                            ).animate(_transition),
-                            child: IndexedStack(
-                              key: ValueKey<String>(
-                                AppScope.of(context).user?.id ?? 'guest',
-                              ),
-                              index: _index,
-                              children: <Widget>[
-                                HomePage(
-                                  active: _index == 0,
-                                  refreshToken: _refreshToken,
-                                  onNavigate: _select,
-                                ),
-                                AppsPage(refreshToken: _refreshToken),
-                                CourseHubPage(
-                                  active: _index == 2,
-                                  refreshToken: _refreshToken,
-                                ),
-                                const ProfilePage(),
-                              ],
-                            ),
-                          ),
+                      gradient: LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [
+                          Theme.of(context).colorScheme.primaryContainer
+                              .withValues(alpha: .55),
+                          Theme.of(context).colorScheme.surface,
+                          Theme.of(context).colorScheme.tertiaryContainer
+                              .withValues(alpha: .4),
+                        ],
+                      ),
+                    ),
+                    child: NavigationRail(
+                      backgroundColor: Colors.transparent,
+                      extended: MediaQuery.sizeOf(context).width >= 1250,
+                      selectedIndex: _index,
+                      onDestinationSelected: _select,
+                      leading: Padding(
+                        padding: const EdgeInsets.symmetric(
+                          vertical: 22,
+                          horizontal: 12,
                         ),
+                        child: Column(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: Theme.of(context).colorScheme.surface,
+                                borderRadius: BorderRadius.circular(20),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Theme.of(context).colorScheme.primary
+                                        .withValues(alpha: .12),
+                                    blurRadius: 24,
+                                    offset: const Offset(0, 8),
+                                  ),
+                                ],
+                              ),
+                              child: Image.asset(
+                                'assets/brand/campulse-logo.png',
+                                width: 44,
+                                height: 44,
+                              ),
+                            ),
+                            if (MediaQuery.sizeOf(context).width >= 1250) ...[
+                              const SizedBox(height: 16),
+                              const Text(
+                                'CAMPULSE',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w800,
+                                  letterSpacing: 2,
+                                ),
+                              ),
+                              const SizedBox(height: 5),
+                              Text(
+                                'LEARN · BUILD · CONNECT',
+                                style: TextStyle(
+                                  fontSize: 9,
+                                  letterSpacing: 1,
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .onSurfaceVariant,
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                      destinations: [
+                        for (int i = 0; i < labels.length; i++)
+                          NavigationRailDestination(
+                            icon: Icon(icons[i]),
+                            label: Text(labels[i]),
+                          ),
                       ],
                     ),
                   ),
+                ],
+                Expanded(
+                  child: Align(
+                    alignment: Alignment.topCenter,
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 1560),
+                      child: Column(
+                        children: <Widget>[
+                          // 离线横幅只在整个后端都不可达时出现；若只是某些接口还没上线，
+                          // 由各区块自己的"演示数据"标记如实说明（见 home_page.dart）。
+                          // The offline banner appears only when the whole backend is unreachable; when
+                          // merely some endpoints are missing, each block states it with its own demo
+                          // badge instead (see home_page.dart).
+                          const OfflineBanner(),
+                          Expanded(
+                            child: FadeTransition(
+                              opacity: Tween<double>(
+                                begin: .82,
+                                end: 1,
+                              ).animate(_transition),
+                              child: IndexedStack(
+                                key: ValueKey<String>(
+                                  AppScope.of(context).user?.id ?? 'guest',
+                                ),
+                                index: _index,
+                                children: <Widget>[
+                                  HomePage(
+                                    active: _index == 0,
+                                    refreshToken: _refreshToken,
+                                    onNavigate: _select,
+                                  ),
+                                  AppsPage(refreshToken: _refreshToken),
+                                  CourseHubPage(
+                                    active: _index == 2,
+                                    refreshToken: _refreshToken,
+                                  ),
+                                  const ProfilePage(),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
           bottomNavigationBar: desktop
               ? null

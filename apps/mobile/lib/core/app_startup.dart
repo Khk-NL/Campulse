@@ -20,6 +20,7 @@ import 'package:campus_mobile/data/repositories/campus_repository.dart';
 import 'package:campus_mobile/data/repositories/pocketbase_campus_repository.dart';
 import 'package:campus_mobile/data/repositories/remote_campus_repository.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// 一次完整的启动结果 / the complete result of one startup.
@@ -103,7 +104,11 @@ class AppStartup {
   static Future<OpenSdkMiniProgramTransport?> _weChatMiniPrograms(
     AppConfig config,
   ) async {
-    if (!config.hasWeChatAppId) return null;
+    if (kIsWeb ||
+        defaultTargetPlatform != TargetPlatform.android ||
+        !config.hasWeChatAppId) {
+      return null;
+    }
     final OpenSdkMiniProgramTransport transport = OpenSdkMiniProgramTransport(
       appId: config.weChatAppId,
     );

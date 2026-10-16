@@ -1,11 +1,13 @@
 import 'dart:convert';
-import 'dart:io';
 import 'dart:math';
 import 'dart:typed_data';
 
 import 'package:path/path.dart' as path;
-import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+import 'local_pdf_storage_browser.dart'
+    if (dart.library.io) 'local_pdf_storage_native.dart'
+    as pdf_storage;
 
 /// Campulse owns note text; an AI provider may read a copy but never becomes its store.
 class CourseNote {
@@ -139,8 +141,7 @@ class LocalCourseNoteRepository implements CourseNoteRepository {
     notes.removeWhere((CourseNote note) => note.id == id);
     await _write(notes);
     if (removed != null && removed.localFile.isNotEmpty) {
-      final File file = File(removed.localFile);
-      if (await file.exists()) await file.delete();
+      await pdf_storage.deletePdf(removed.localFile);
     }
   }
 
@@ -152,29 +153,24 @@ class LocalCourseNoteRepository implements CourseNoteRepository {
     String extractedText = '',
   }) async {
     final String id = _newId();
-    final Directory directory = Directory(
-      path.join((await getApplicationDocumentsDirectory()).path, 'course-pdfs'),
-    );
-    await directory.create(recursive: true);
-    final File file = File(path.join(directory.path, '$id.pdf'));
-    await file.writeAsBytes(bytes, flush: true);
+    final String filePath = await pdf_storage.writePdf(id, bytes);
     final CourseNote note = CourseNote(
       id: id,
       courseId: courseId,
       title: path.basenameWithoutExtension(fileName),
       content: extractedText,
       updatedAt: DateTime.now(),
-      localFile: file.path,
+      localFile: filePath,
     );
     try {
       return await save(note);
     } catch (_) {
-      await file.delete();
+      await pdf_storage.deletePdf(filePath);
       rethrow;
     }
   }
 
   @override
   Future<Uint8List> readPdf(CourseNote note) =>
-      File(note.localFile).readAsBytes();
+      pdf_storage.readPdf(note.localFile);
 }

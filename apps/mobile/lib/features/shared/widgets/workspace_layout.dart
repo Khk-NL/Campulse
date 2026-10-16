@@ -1,5 +1,59 @@
 import 'package:flutter/material.dart';
 
+/// Subtle ambient layers stay behind the interactive workspaces.
+class WorkspaceCanvas extends StatelessWidget {
+  const WorkspaceCanvas({super.key, required this.child});
+  final Widget child;
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            Color.alphaBlend(
+              colors.primary.withValues(alpha: .045),
+              colors.surface,
+            ),
+            Color.alphaBlend(
+              colors.secondary.withValues(alpha: .035),
+              colors.surface,
+            ),
+            Color.alphaBlend(
+              colors.tertiary.withValues(alpha: .065),
+              colors.surface,
+            ),
+          ],
+        ),
+      ),
+      child: CustomPaint(
+        painter: _WorkspaceGridPainter(colors.outlineVariant),
+        child: child,
+      ),
+    );
+  }
+}
+
+class _WorkspaceGridPainter extends CustomPainter {
+  const _WorkspaceGridPainter(this.color);
+  final Color color;
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()..color = color.withValues(alpha: .3);
+    for (double x = 16; x < size.width; x += 36) {
+      for (double y = 16; y < size.height; y += 36) {
+        canvas.drawCircle(Offset(x, y), .75, paint);
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(_WorkspaceGridPainter oldDelegate) =>
+      color != oldDelegate.color;
+}
+
 /// Shared visual language for the mobile dashboard and desktop workspace.
 class WorkspaceBanner extends StatelessWidget {
   const WorkspaceBanner({
@@ -105,19 +159,89 @@ class WorkspaceBanner extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(width: 12),
-                DecoratedBox(
-                  decoration: BoxDecoration(
-                    color: colors.primaryContainer.withValues(alpha: .5),
-                    borderRadius: BorderRadius.circular(16),
+                if (vivid &&
+                    MediaQuery.sizeOf(context).width >= 1000 &&
+                    MediaQuery.sizeOf(context).height >= 650)
+                  _WorkspaceEmblem(icon: icon)
+                else
+                  DecoratedBox(
+                    decoration: BoxDecoration(
+                      color: colors.primaryContainer.withValues(alpha: .5),
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.all(12),
+                      child: Icon(icon, color: colors.primary, size: 28),
+                    ),
                   ),
-                  child: Padding(
-                    padding: const EdgeInsets.all(12),
-                    child: Icon(icon, color: colors.primary, size: 28),
-                  ),
-                ),
               ],
             ),
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class _WorkspaceEmblem extends StatelessWidget {
+  const _WorkspaceEmblem({required this.icon});
+  final IconData icon;
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    Widget tile(IconData glyph, Color color, Color foreground, double angle) =>
+        Transform.rotate(
+          angle: angle,
+          child: Container(
+            width: 66,
+            height: 76,
+            decoration: BoxDecoration(
+              color: color,
+              borderRadius: BorderRadius.circular(19),
+              border: Border.all(color: foreground.withValues(alpha: .16)),
+              boxShadow: [
+                BoxShadow(
+                  color: colors.primary.withValues(alpha: .1),
+                  blurRadius: 24,
+                  offset: const Offset(0, 8),
+                ),
+              ],
+            ),
+            child: Icon(glyph, size: 32, color: foreground),
+          ),
+        );
+    return ExcludeSemantics(
+      child: SizedBox(
+        width: 174,
+        height: 122,
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            Positioned(
+              left: 5,
+              top: 10,
+              child: tile(
+                Icons.code,
+                colors.tertiaryContainer,
+                colors.onTertiaryContainer,
+                -.24,
+              ),
+            ),
+            Positioned(
+              right: 4,
+              top: 16,
+              child: tile(
+                Icons.bolt,
+                colors.secondaryContainer,
+                colors.onSecondaryContainer,
+                .25,
+              ),
+            ),
+            Positioned(
+              bottom: 0,
+              child: tile(icon, colors.primary, colors.onPrimary, -.04),
+            ),
+          ],
         ),
       ),
     );

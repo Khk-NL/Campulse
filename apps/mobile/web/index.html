@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <base href="$FLUTTER_BASE_HREF">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Campulse：课程笔记、AI 学习、个人计划与校园项目社区。">
+  <meta name="theme-color" content="#A41F35">
+  <link rel="icon" type="image/png" href="favicon.png">
+  <link rel="apple-touch-icon" href="icon.png">
+  <link rel="manifest" href="manifest.json">
+  <title>Campulse · 校园工作台</title>
+  <style>
+    :root{color-scheme:light dark;font-family:system-ui,"Microsoft YaHei",sans-serif;background:#f7f6f3;color:#25212b}
+    body{margin:0} #boot{min-height:100dvh;display:grid;place-content:center;overflow:hidden;position:relative}
+    #boot::before{content:"";position:absolute;inset:0;pointer-events:none;background:radial-gradient(ellipse at 20% 25%,#a41f3525,transparent 52%),radial-gradient(ellipse at 80% 75%,#dfb84f30,transparent 48%)}
+    .intro{position:relative;width:min(78vw,460px);padding:36px;border:1px solid #a41f3520;border-radius:32px;background:#ffffffb8;box-shadow:0 24px 90px #55426b12}
+    img{width:72px;height:72px;border-radius:20px}h1{font-size:42px;letter-spacing:-1.5px;margin:22px 0 8px}p{line-height:1.8;color:#655e6b;margin:0 0 26px}
+    .track{height:5px;background:#a41f3515;overflow:hidden;border-radius:8px}.track::after{content:"";display:block;width:40%;height:100%;border-radius:8px;background:linear-gradient(90deg,#a41f35,#daa938,#777dca);animation:load 1.7s ease-in-out infinite}
+    #status{font-size:13px;margin:18px 0 0}button{font:inherit;cursor:pointer;border:0;border-radius:12px;padding:10px 20px;background:#a41f35;color:white;margin-top:16px}
+    @keyframes load{from{transform:translateX(-100%)}to{transform:translateX(350%)}}
+    @media(prefers-color-scheme:dark){:root{background:#120f14;color:#f8f0f4}.intro{background:#211b29d9;border-color:#ffffff18}p{color:#c7becd}}
+    @media(prefers-reduced-motion:reduce){.track::after{animation:none;width:100%}}
+  </style>
+</head>
+<body>
+  <main id="boot" aria-live="polite">
+    <section class="intro"><img src="icon.png" alt="Campulse"><h1>Campulse</h1><p>让学习有脉络，让校园更有连接。</p><div class="track"></div><p id="status">正在连接校园工作台…</p><button id="retry" hidden onclick="location.reload()">重新加载</button></section>
+  </main>
+  <noscript>请启用浏览器 JavaScript 后进入工作台。</noscript>
+  <script src="flutter_bootstrap.js" async></script>
+</body>
+</html>

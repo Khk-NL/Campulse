@@ -4,6 +4,8 @@
 
 ## 技术选择
 
+电脑端同时提供[浏览器工作台](WEB.md)，适合直接访问和调试。Web 与 Windows 共享页面和远程数据；平台文件访问、会话与浏览器限制分别适配。Windows 保留独立发布。
+
 采用 Flutter Windows，与 Android 共用页面、数据仓库和认证流程。当前项目的课程、PDF 阅读、笔记、计划与社区已经用 Dart 实现，复用这些代码比另建 Electron 网页前端更直接。Electron 的 Chromium / Node.js 进程模型适合以网页为主体的桌面产品；Campulse 本轮保持单套客户端业务代码。
 
 依据：[Flutter 桌面支持](https://docs.flutter.dev/platform-integration/desktop)、[Electron 进程模型](https://www.electronjs.org/docs/latest/tutorial/process-model)。复旦[旦挞](https://github.com/DanXi-Dev/DanXi)同样提供 Flutter 多端实现，可参考其跨端发布组织。

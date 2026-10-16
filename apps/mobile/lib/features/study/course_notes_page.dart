@@ -263,6 +263,7 @@ class _CourseNotesPageState extends State<CourseNotesPage> {
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
                           WorkspaceBanner(
+                            vivid: true,
                             eyebrow: 'COURSE COLLECTION',
                             title: '资料与笔记',
                             subtitle: '教材、课堂摘录和自己的思考，集中整理。',

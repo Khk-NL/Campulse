@@ -57,7 +57,9 @@ Campulse 的项目、讨论、回复和关注记录保存在自己的数据库�
 
 ## 手机与电脑接着用
 
-Windows 客户端与 Android 共用 Flutter 业务代码和 PocketBase 账号。电脑采用侧栏导航，课程学习空间可并排查看资料、提问和工作台；窄窗口切回紧凑布局。课程置顶、入口收藏随账号保存，云端内容可从两端刷新读回。
+Web、Windows 与 Android 共用 Flutter 业务代码和 PocketBase 账号。电脑采用侧栏导航，课程学习空间可并排查看资料、提问和工作台；窄窗口切回紧凑布局。课程置顶、入口收藏随账号保存，云端内容可从各端刷新读回。
+
+[浏览器工作台](https://campus.allezafrique.cn/app/)用于直接体验，使用自己的普通账号登录。[Web 开发与发布](docs/WEB.md)提供本机预览、热重载和云构建步骤；Windows 继续作为独立客户端提供。
 
 Windows 安装与跨端验收见[桌面与同步](docs/DESKTOP.md)。下载和发布状态以对应 Release 与[验收记录](docs/ACCEPTANCE.md)为准。
 
