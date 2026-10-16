@@ -1,6 +1,6 @@
 # 开发指南
 
-更新：2026-10-15。产品范围见[项目首页](../README.md)，继续工作先读[交接清单](HANDOFF.md)。
+更新：2026-10-16。产品范围见[项目首页](../README.md)，继续工作先读[交接清单](HANDOFF.md)。
 
 ## 环境与初始化
 
@@ -27,6 +27,8 @@ flutter run --dart-define-from-file=config/eduwork.production.example.json
 
 调试本机后端时，设备需要能访问开发机；标准 Android 模拟器通常使用 10.0.2.2，MuMu 地址按实际网络与端口确认。手机正式使用 HTTPS。普通 App 账号与 PocketBase 超级管理员分别使用。
 
+Windows 开发在同一目录使用 `flutter run -d windows --dart-define-from-file=config/eduwork.production.example.json`，准备 Visual Studio C++ 桌面工作负载和 Windows SDK。云构建、ZIP 安装及跨端验证见[桌面说明](DESKTOP.md)。
+
 ## 改动落点
 
 | 需求 | 优先查看 |
@@ -36,6 +38,8 @@ flutter run --dart-define-from-file=config/eduwork.production.example.json
 | 主题与偏好 | `apps/mobile/lib/core/theme/`、AppState |
 | 课程、笔记和同步 | study 模块的 Repository |
 | 校园社区 | forge 页面、Repository 与对应迁移 |
+| 校园广场与组队 | `features/community/` 与 `1790210013_campus_square.js` |
+| 桌面与响应式布局 | `windows/`、`workspace_layout.dart`、`app_shell.dart` |
 | AI 与检索 | `apps/ai-gateway/src/` |
 | 官网和运营台 | `deploy/pocketbase/pb_public/` |
 | 数据字段与权限 | 两处 PocketBase 迁移目录 |

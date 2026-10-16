@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import crypto from 'node:crypto';
 import fs from 'node:fs';
 import { spawn, spawnSync } from 'node:child_process';
+import { AdminClient } from '../deploy/pocketbase/pb_public/assets/admin-client.mjs';
 
 const local = process.argv.includes('--local');
 if (!local && !process.argv.includes('--apply')) throw new Error('Remote checks create disposable records. Add --apply.');
@@ -79,6 +80,17 @@ try {
   check('discussion is visible to verified members', (await get('community_replies', c.token, reply.id)).status === 200);
   check('reply parent binding stays immutable', (await patch('community_replies', b.token, reply.id, { owner: a.id })).status !== 200);
   const profile = await create('community_profiles', a.token, { owner: a.id, displayName: '兴趣验收', bio: '编程与运动', interests: '羽毛球', campus: 'minhang', published: false });
+  const consoleClient = new AdminClient(base); consoleClient.token = admin;
+  await consoleClient.loadCollections();
+  const ownedPosts = await consoleClient.list('community_posts', { view: 'squarePosts', owner: a.id });
+  check('admin personal view returns the selected user post', ownedPosts.items.some(row => row.id === post.id) && ownedPosts.items.every(row => row.owner === a.id));
+  const ownInterests = await consoleClient.list('community_interests', { view: 'squareInterests', owner: b.id });
+  check('admin registration view follows participant ownership', ownInterests.items.some(row => row.id === interest.id) && ownInterests.items.every(row => row.owner === b.id));
+  const received = await consoleClient.list('community_interests', { view: 'squareReceivedInterests', owner: a.id });
+  check('admin host view includes incoming registrations', received.items.some(row => row.id === interest.id));
+  const joined = await request('community_interests', b.token, { suffix: '/records?' + new URLSearchParams({ filter: `owner = "${b.id}" && post.universityId = "ecnu" && post.kind = "sport"`, expand: 'post', perPage: '20', page: '1' }) });
+  check('joined feed uses paged owner relations with expanded posts', joined.status === 200 && joined.data.totalItems === 1 && joined.data.items[0].expand?.post?.id === post.id);
+  check('admin global feed contains the published gathering', (await consoleClient.list('community_posts', { view: 'squareFeed' })).items.some(row => row.id === post.id));
   check('private interest card stays owner-only', (await get('community_profiles', b.token, profile.id)).status === 404);
   await patch('community_profiles', a.token, profile.id, { published: true });
   check('opt-in card reaches other members', (await get('community_profiles', b.token, profile.id)).status === 200);

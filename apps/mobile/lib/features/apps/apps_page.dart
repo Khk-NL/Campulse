@@ -294,6 +294,10 @@ class _AppsPageState extends State<AppsPage> {
             );
 
         final FavoritesController favorites = AppScope.of(context).favorites;
+        bool isFavorite(CampusEntry entry) => favorites.contains(
+          ServiceGrouping.favoriteBoardOf(ServiceGrouping.groupOfEntry(entry)),
+          entry.key,
+        );
 
         final Map<ServiceGroup, List<CampusEntry>> grouped =
             <ServiceGroup, List<CampusEntry>>{
@@ -305,16 +309,7 @@ class _AppsPageState extends State<AppsPage> {
         }
 
         final List<CampusEntry> source = _favoritesOnly
-            ? catalogue.entries
-                  .where(
-                    (entry) => favorites.contains(
-                      ServiceGrouping.favoriteBoardOf(
-                        ServiceGrouping.groupOfEntry(entry),
-                      ),
-                      entry.key,
-                    ),
-                  )
-                  .toList()
+            ? catalogue.entries.where(isFavorite).toList()
             : grouped[_group]!;
         final List<CampusEntry> searched = CampusEntries.search(
           source,
@@ -326,12 +321,7 @@ class _AppsPageState extends State<AppsPage> {
         );
         final List<CampusEntry> visible = ServiceGrouping.favoritesFirstEntries(
           ordered,
-          isFavorite: (CampusEntry entry) => favorites.contains(
-            ServiceGrouping.favoriteBoardOf(
-              ServiceGrouping.groupOfEntry(entry),
-            ),
-            entry.key,
-          ),
+          isFavorite: isFavorite,
         );
 
         return RefreshIndicator(
@@ -392,10 +382,12 @@ class _AppsPageState extends State<AppsPage> {
                 Padding(
                   padding: const EdgeInsets.symmetric(vertical: 32),
                   child: EmptyStateView(
-                    // 两种"空"分开说：这个子列表本来就没有入口 vs 搜索没命中。
-                    // Two kinds of empty, told apart: nothing in this sub-list versus no match
-                    // for what was typed.
-                    message: grouped[_group]!.isEmpty
+                    message:
+                        _favoritesOnly && !_unfilteredEntries.any(isFavorite)
+                        ? l10n.appsFavoritesEmpty
+                        : _favoritesOnly
+                        ? l10n.appsSearchEmpty
+                        : grouped[_group]!.isEmpty
                         ? l10n.appsGroupEmpty
                         : l10n.appsSearchEmpty,
                     icon: Icons.filter_alt_off_outlined,
@@ -409,12 +401,7 @@ class _AppsPageState extends State<AppsPage> {
                       entry: entry,
                       name: _nameOf(catalogue, entry),
                       description: _descriptionOf(catalogue, entry),
-                      isFavorite: favorites.contains(
-                        ServiceGrouping.favoriteBoardOf(
-                          ServiceGrouping.groupOfEntry(entry),
-                        ),
-                        entry.key,
-                      ),
+                      isFavorite: isFavorite(entry),
                       onToggleFavorite: () async {
                         try {
                           await favorites.toggle(

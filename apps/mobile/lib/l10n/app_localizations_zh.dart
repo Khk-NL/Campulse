@@ -394,6 +394,9 @@ class AppLocalizationsZh extends AppLocalizations {
   String get appsSearchEmpty => '试试其他关键词或分类';
 
   @override
+  String get appsFavoritesEmpty => '收藏常用服务，在这里集中查看。';
+
+  @override
   String get appsSortLabel => '排序';
 
   @override

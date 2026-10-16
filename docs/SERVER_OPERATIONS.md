@@ -1,8 +1,12 @@
 # 服务器运维
 
-更新：2026-10-15。安装和增量部署见[部署手册](REMOTE_DEPLOYMENT.md)，当前开放项见[验收记录](ACCEPTANCE.md)。
+更新：2026-10-16。安装和增量部署见[部署手册](REMOTE_DEPLOYMENT.md)，当前开放项见[验收记录](ACCEPTANCE.md)。
 
 ## 已知故障与监控
+
+2026-10-16 架构复核后，运营台增加收到的报名与多行编辑，三项静态文件增量替换后公开读回一致；恢复点 `/opt/campus/backups/admin-review-20261016`。远程社区 25 项验收通过并清理临时数据，数据库迁移沿用 0013。PocketBase、AI、Caddy 与 atop 均 active，根分区 20% / 可用 30G；正式域名 HTTP 备案阻断与 TLS 1.2 重置仍可复现。
+
+2026-10-16 校园广场升级：源提交 `ce0535c`，生产新增迁移 `1790210013_campus_square.js`。一致性恢复点 `/opt/campus/backups/community-20261016-095650`；运营台原件在 `/opt/campus/backups/admin-square-20261016-ce0535c`。迁移后 health 与 23 项广场远程 API 验收通过，测试生成的临时账号和记录已清理。此次只短暂停 PocketBase，其他站点、Caddy 与 AI 网关保持。
 
 2026-10-01 整机失联，云厂商监控判断磁盘 I/O 饱和。具体高 I/O 进程尚待证据定位。重启恢复与原因定位分别处理。
 

@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { AdminClient, appPayload, ownerFilter, workspaceSummary, workspaceFilter, sections, editableFields, searchFilter } from '../deploy/pocketbase/pb_public/assets/admin-client.mjs';
+import { AdminClient, appPayload, ownerFilter, workspaceSummary, workspaceFilter, sections, editableFields, isMultilineField, searchFilter } from '../deploy/pocketbase/pb_public/assets/admin-client.mjs';
 
 const recordId = '0123456789abcde';
 test('console uses unique IDs and an accessible layered sidebar', () => {
@@ -42,7 +42,22 @@ test('square administration preserves personal ownership and provides a global m
     assert.throws(() => workspaceFilter(view));
   }
   assert.equal(workspaceFilter('squareFeed'), '');
+  assert.equal(workspaceFilter('squareReceivedInterests', recordId), `post.owner = "${recordId}" && owner != "${recordId}"`);
+  assert.throws(() => workspaceFilter('squareReceivedInterests'));
   assert.equal(sections.community_interests.action, '新增活动报名');
+});
+
+test('multiline domain fields retain line breaks in the schema editor', () => {
+  for (const name of ['content', 'front', 'back', 'body', 'message', 'bio']) {
+    assert.equal(isMultilineField({ type: 'text', name }), true);
+  }
+  assert.equal(isMultilineField({ type: 'text', name: 'title' }), false);
+  assert.equal(isMultilineField({ type: 'json', name: 'payload' }), true);
+  assert.equal(isMultilineField({ type: 'select', name: 'tags', maxSelect: 5 }), true);
+  assert.equal(isMultilineField({ type: 'file', name: 'attachments', maxSelect: 5 }), false);
+  const source = readFileSync(new URL('../deploy/pocketbase/pb_public/assets/admin.mjs', import.meta.url), 'utf8');
+  assert.match(source, /else if \(isMultilineField\(field\)\)/);
+  assert.match(source, /field\.type === 'file' \|\| isMultilineField\(field\)/);
 });
 test('domain listing preserves relationship scopes', async () => {
   let requested;

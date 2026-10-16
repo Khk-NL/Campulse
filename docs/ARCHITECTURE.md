@@ -1,6 +1,6 @@
 # 系统架构
 
-更新：2026-10-15。当前产品由 Flutter 客户端、PocketBase、Node.js AI 网关和静态官网/运营台组成。
+更新：2026-10-16。当前产品由 Flutter Android / Windows 客户端、PocketBase、Node.js AI 网关和静态官网/运营台组成。
 
 ## 运行路径
 
@@ -47,6 +47,23 @@ Caddy（现有共享服务器的 80/443）
 普通用户使用 PocketBase 会话，登录态持久化到设备安全存储，启动尝试刷新；网络超时保留已有会话。网关通过服务端 auth-refresh 校验已验证账号，使用请求者令牌读取资料，再检查用户与课程归属。
 
 运营台使用 PocketBase 超级管理员身份，具备全库权限。普通用户访问规则、运营人员操作范围和后续分级角色分别管理。
+
+## 工作区功能与实现
+
+| 用户操作 | 界面与状态 | 数据路径及边界 |
+| --- | --- | --- |
+| 从首页安排任务 | `home_page.dart` → 计划页 → 学习 Repository | 用户工作台快照，完成后归档；双端先保存再刷新 |
+| 搜课程、置顶和进入笔记本 | `course_hub_page.dart`、`course_notebook_view.dart` | 个人课程按 owner 读取；置顶使用 `user_favorites` 的 `courses` 分组 |
+| 查看教材、提问和生成成果 | 宽屏资料/提问/工作台三栏，手机分区切换 | 受保护附件 → AI 网关鉴权 → 用户资料 → 模型 → 用户成果 |
+| 查服务、收藏和打开入口 | `apps_page.dart`、CampusLauncher | 管理员公共目录，收藏按用户保存；网页由系统浏览器打开 |
+| 项目发布、审核、讨论和 Star | Forge 页面与 Repository | 私有草稿 → 逐项审核 → 公共发现；讨论继承项目可见范围 |
+| 发起召集、报名和讨论 | `community_page.dart`、`community_repository.dart` | `community_posts/interests/replies`；发起人和报名者可读报名留言 |
+| 查看“我报名的” | 对报名集合按 owner 分页，展开 `post` 关系 | 每页 20 条，学校/类型/校区/搜索在服务端关联过滤，保留分页总数 |
+| 编辑兴趣名片 | 用户主动公开，按 owner 查找后新增或更新 | 唯一 owner 索引；并发创建时重新查找本人记录再更新 |
+| 管理召集与用户内容 | 运营台按用户/发起人/全站分层视图 | 报名分为本人报名与收到的报名；多行字段使用 textarea 保留换行 |
+| 跨端导航与发布 | `app_shell.dart`、Android/Windows CI | 共享业务层，按窗口宽度切换侧栏/底栏；产物与源码提交一起发布 |
+
+界面布局与数据权限分开：窗口变宽只改变呈现方式，Repository 与 PocketBase 访问规则保持一致。当前同步为保存后刷新；同一工作台的并行修改以后保存的快照为准。实时通知、冲突合并和运营审计见[路线图](ROADMAP.md)。
 
 ## AI 集成
 

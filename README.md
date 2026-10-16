@@ -10,7 +10,7 @@ Campulse 是面向高校学生的校园应用，首站适配华东师范大学�
 
 学校的随师办承担官方服务门户，ChatECNU 与 EduWork 提供学校 AI 能力。Campulse 继续聚合这些入口，结合移动端课程整理、个人复习和学生项目交流。学校服务与 Campulse 自有数据按各自账号和授权范围连接。[功能对比与集成路线](docs/ROADMAP.md#学校平台对比与集成)
 
-[下载 Android 预览版](https://github.com/Khk-NL/Campulse/releases/tag/campulse-preview) · [问题反馈](https://github.com/Khk-NL/Campulse/issues) · [文档导航](docs/README.md)
+[下载 Android 预览版](https://github.com/Khk-NL/Campulse/releases/tag/campulse-preview) · [下载 Windows 预览版](https://github.com/Khk-NL/Campulse/releases/tag/campulse-desktop-preview) · [问题反馈](https://github.com/Khk-NL/Campulse/issues) · [文档导航](docs/README.md)
 
 ## 学习，从一门课开始
 

@@ -352,14 +352,20 @@ class _CommunityPageState extends State<CommunityPage> {
               ),
               const SizedBox(height: 14),
               Text(
-                '${communityCampuses[item.getStringValue('campus')] ?? ''} · ${item.getStringValue('location')}',
+                [
+                  communityCampuses[item.getStringValue('campus')] ?? '',
+                  item.getStringValue('location'),
+                ].where((part) => part.isNotEmpty).join(' · '),
                 style: Theme.of(context).textTheme.bodySmall,
               ),
               if (date.isNotEmpty)
                 Text(date, style: Theme.of(context).textTheme.bodySmall),
               const SizedBox(height: 8),
               Text(
-                '${item.getStringValue('displayName')} · ${item.getStringValue('tags')}',
+                [
+                  item.getStringValue('displayName'),
+                  item.getStringValue('tags'),
+                ].where((part) => part.isNotEmpty).join(' · '),
                 style: Theme.of(context).textTheme.labelMedium
                     ?.copyWith(color: color.primary),
               ),
@@ -509,7 +515,10 @@ class _CommunityPostPageState extends State<CommunityPostPage> {
               SelectableText(item.getStringValue('body')),
               const SizedBox(height: 16),
               Text(
-                '${communityCampuses[item.getStringValue('campus')] ?? ''} · ${item.getStringValue('location')}',
+                [
+                  communityCampuses[item.getStringValue('campus')] ?? '',
+                  item.getStringValue('location'),
+                ].where((part) => part.isNotEmpty).join(' · '),
               ),
               if (item.getStringValue('startsAt').isNotEmpty)
                 Text(_date(item.getStringValue('startsAt'))),

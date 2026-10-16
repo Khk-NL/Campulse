@@ -136,6 +136,7 @@
   "appsSearchHint": "Search this sub-list",
   "@appsSearchHint": { "description": "每个子列表各自的搜索框 / the search box of the current sub-list" },
   "appsSearchEmpty": "Try another keyword or category",
+  "appsFavoritesEmpty": "Save your favorite services to find them here.",
   "@appsSearchEmpty": { "description": "搜索没命中（区别于子列表本身为空）/ nothing matched the search, as opposed to an empty sub-list" },
   "appsSortLabel": "Sort",
   "appsSortName": "By name",

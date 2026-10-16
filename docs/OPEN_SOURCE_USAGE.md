@@ -26,4 +26,6 @@ dire.muedu.org/student 用于功能组织参考。Campulse 的课程、笔记和
 
 ## 维护要求
 
+本轮工作区和校园广场参考复旦[旦挞](https://github.com/DanXi-Dev/DanXi)、[求是潮手机站](https://www.qsc.zju.edu.cn/mobile)与[航概校园邦](https://github.com/Fewing/buaa_takeaway)的产品组织，交互和数据访问在现有 Campulse 架构内实现。旦挞和校园邦仓库标注 GPL-3.0，后续源码集成按原许可单独评估；本轮登记为设计参考。
+
 新增分发源码时记录固定提交、原始许可与本地修改。保留 vendor 目录中的 README 与 LICENSE，升级时核对模块接口并运行对应回归测试。对外展示学校服务与开源来源时使用真实名称及授权范围。

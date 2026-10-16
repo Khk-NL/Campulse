@@ -794,6 +794,12 @@ abstract class AppLocalizations {
   /// **'试试其他关键词或分类'**
   String get appsSearchEmpty;
 
+  /// No description provided for @appsFavoritesEmpty.
+  ///
+  /// In zh, this message translates to:
+  /// **'收藏常用服务，在这里集中查看。'**
+  String get appsFavoritesEmpty;
+
   /// No description provided for @appsSortLabel.
   ///
   /// In zh, this message translates to:

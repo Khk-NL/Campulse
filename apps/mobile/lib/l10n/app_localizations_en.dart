@@ -401,6 +401,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get appsSearchEmpty => 'Try another keyword or category';
 
   @override
+  String get appsFavoritesEmpty =>
+      'Save your favorite services to find them here.';
+
+  @override
   String get appsSortLabel => 'Sort';
 
   @override

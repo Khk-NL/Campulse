@@ -183,7 +183,11 @@ void main() {
     );
   }
 
-  Widget wrap(AppState state, {CampusLauncher? launcher}) {
+  Widget wrap(
+    AppState state, {
+    CampusLauncher? launcher,
+    bool initialFavorites = false,
+  }) {
     return AppScope(
       state: state,
       child: CampusRepositoryScope(
@@ -196,12 +200,34 @@ void main() {
             localeResolutionCallback: resolveSupportedLocale,
             supportedLocales: AppLocalizations.supportedLocales,
             localizationsDelegates: AppLocalizations.localizationsDelegates,
-            home: const Scaffold(body: AppsPage()),
+            home: Scaffold(body: AppsPage(initialFavorites: initialFavorites)),
           ),
         ),
       ),
     );
   }
+
+  testWidgets(
+    'favorites shortcut opens its own empty state and returns to directory',
+    (tester) async {
+      useTallViewport(tester);
+      final state = await buildState(RecordingCampusRepository());
+      addTearDown(state.dispose);
+      await tester.pumpWidget(wrap(state, initialFavorites: true));
+      await tester.pumpAndSettle();
+      expect(find.text('收藏常用服务，在这里集中查看。'), findsOneWidget);
+      expect(
+        tester
+            .widget<ChoiceChip>(find.widgetWithText(ChoiceChip, '我的收藏'))
+            .selected,
+        isTrue,
+      );
+      await tester.tap(find.widgetWithText(ChoiceChip, '服务目录'));
+      await tester.pumpAndSettle();
+      expect(find.text('收藏常用服务，在这里集中查看。'), findsNothing);
+      expect(find.byIcon(Icons.star_border), findsWidgets);
+    },
+  );
 
   /// 子列表芯片的文案（带条数）/ a sub-list chip's label, which carries its count.
   String subListLabel(

@@ -20,31 +20,23 @@ class CommunityRepository {
     String query = '',
     String scope = 'all',
   }) async {
-    final joined = scope == 'joined'
-        ? await client
-              .collection('community_interests')
-              .getFullList(
-                filter: client.filter('owner = {:owner}', {'owner': userId}),
-              )
-        : <RecordModel>[];
-    return client
-        .collection('community_posts')
+    final joined = scope == 'joined';
+    final prefix = joined ? 'post.' : '';
+    final rows = await client
+        .collection(joined ? 'community_interests' : 'community_posts')
         .getList(
           page: page,
           perPage: 20,
+          expand: joined ? 'post' : null,
           sort: '-created',
           filter: client.filter(
             [
-              'universityId = {:university}',
-              if (scope == 'mine') 'owner = {:owner}',
-              if (scope == 'joined')
-                joined.isEmpty
-                    ? 'id = ""'
-                    : '(${List.generate(joined.length, (i) => 'id = {:joined$i}').join(' || ')})',
-              if (kind != null) 'kind = {:kind}',
-              if (campus != null) 'campus = {:campus}',
+              '${prefix}universityId = {:university}',
+              if (scope == 'mine' || joined) 'owner = {:owner}',
+              if (kind != null) '${prefix}kind = {:kind}',
+              if (campus != null) '${prefix}campus = {:campus}',
               if (query.trim().isNotEmpty)
-                '(title ~ {:query} || body ~ {:query} || tags ~ {:query})',
+                '(${prefix}title ~ {:query} || ${prefix}body ~ {:query} || ${prefix}tags ~ {:query})',
             ].join(' && '),
             {
               'owner': userId,
@@ -52,11 +44,19 @@ class CommunityRepository {
               'kind': kind,
               'campus': campus,
               'query': query.trim(),
-              for (int i = 0; i < joined.length; i++)
-                'joined$i': joined[i].getStringValue('post'),
             },
           ),
         );
+    if (!joined) return rows;
+    return ResultList<RecordModel>(
+      page: rows.page,
+      perPage: rows.perPage,
+      totalItems: rows.totalItems,
+      totalPages: rows.totalPages,
+      items: [
+        for (final row in rows.items) ?row.get<RecordModel?>('expand.post'),
+      ],
+    );
   }
 
   Future<RecordModel> post(String id) =>
@@ -139,10 +139,21 @@ class CommunityRepository {
     return rows.items.firstOrNull;
   }
 
-  Future<RecordModel> saveProfile(String? id, Map<String, dynamic> fields) =>
-      id == null
-      ? client
-            .collection('community_profiles')
-            .create(body: {...fields, 'owner': userId})
-      : client.collection('community_profiles').update(id, body: fields);
+  Future<RecordModel> saveProfile(
+    String? id,
+    Map<String, dynamic> fields,
+  ) async {
+    final profiles = client.collection('community_profiles');
+    final existingId = id ?? (await myProfile())?.id;
+    if (existingId != null) return profiles.update(existingId, body: fields);
+    try {
+      return await profiles.create(body: {...fields, 'owner': userId});
+    } on ClientException catch (error) {
+      if (error.statusCode != 400) rethrow;
+      // Another device may have created the unique owner profile meanwhile.
+      final concurrent = await myProfile();
+      if (concurrent == null) rethrow;
+      return profiles.update(concurrent.id, body: fields);
+    }
+  }
 }

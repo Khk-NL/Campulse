@@ -54,6 +54,7 @@ export const workspaceViews = Object.freeze({
   squarePosts: { collection: 'community_posts', label: '校园召集', personal: true },
   squareFeed: { collection: 'community_posts', label: '校园广场内容' },
   squareInterests: { collection: 'community_interests', label: '活动报名', personal: true },
+  squareReceivedInterests: { collection: 'community_interests', label: '收到的报名', personal: true, incoming: 'post.owner' },
   squareReplies: { collection: 'community_replies', label: '活动讨论', personal: true },
   squareProfiles: { collection: 'community_profiles', label: '兴趣名片', personal: true },
 });
@@ -84,6 +85,12 @@ export function editableFields(schema) {
   return (schema?.fields || []).filter(field =>
     !['id', 'created', 'updated', 'tokenKey', 'password'].includes(field.name)
     && field.type !== 'autodate');
+}
+
+export function isMultilineField(field) {
+  return ['json', 'editor', 'geoPoint'].includes(field.type)
+    || ['content', 'front', 'back', 'body', 'message', 'bio'].includes(field.name)
+    || field.maxSelect > 1 && field.type !== 'file';
 }
 
 export function searchFilter(schema, text) {

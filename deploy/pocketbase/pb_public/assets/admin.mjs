@@ -1,12 +1,12 @@
-import { AdminClient, collections, sections, workspaceViews, editableFields, workspaceSummary } from './admin-client.mjs?v=20261016-community';
+import { AdminClient, collections, sections, workspaceViews, editableFields, isMultilineField, workspaceSummary } from './admin-client.mjs?v=20261016-review';
 
 const client = new AdminClient(), $ = id => document.getElementById(id);
-const labels = { owner:'用户 ID', courseId:'课程 ID', title:'标题', content:'正文', email:'邮箱', verified:'邮箱已验证', emailVisibility:'邮箱可见', name:'名称', payload:'内容数据', schemaVersion:'数据版本', front:'卡片正面', back:'卡片背面', due:'下次复习', scheduler:'排程数据', reviewHistory:'复习记录', attachment:'附件', kind:'类型', published:'公开发布', demo:'演示标记', universityId:'学校 ID', noteId:'笔记 ID' };
+const labels = { owner:'用户 ID', courseId:'课程 ID', title:'标题', content:'正文', email:'邮箱', verified:'邮箱已验证', emailVisibility:'邮箱可见', name:'名称', payload:'内容数据', schemaVersion:'数据版本', front:'卡片正面', back:'卡片背面', due:'下次复习', scheduler:'排程数据', reviewHistory:'复习记录', attachment:'附件', kind:'类型', published:'公开发布', demo:'演示标记', universityId:'学校 ID', noteId:'笔记 ID', body:'正文', message:'报名留言', bio:'个人介绍', interests:'兴趣与技能', displayName:'显示名称', campus:'校区', location:'活动地点', tags:'标签', startsAt:'开始时间', status:'状态', post:'所属召集' };
 let page = 1, totalPages = 1, version = 0, busy = false, editing = null, deleting = null;
 let reviewing = null;
 let activeView = 'users';
 let selectedUser = null;
-const navIcons = { users:'users', courses:'book', notes:'note', cards:'cards', artifacts:'spark', timetable:'calendar', plans:'check', notifications:'bell', tasks:'check', repositories:'repo', incomingDiscussions:'chat', incomingReplies:'chat', community:'repo', discussions:'chat', replies:'chat', stars:'star', favorites:'star', reviews:'shield', miniPrograms:'grid', websites:'globe', announcements:'bell', events:'calendar' };
+const navIcons = { users:'users', courses:'book', notes:'note', cards:'cards', artifacts:'spark', timetable:'calendar', plans:'check', notifications:'bell', tasks:'check', repositories:'repo', incomingDiscussions:'chat', incomingReplies:'chat', community:'repo', discussions:'chat', replies:'chat', stars:'star', favorites:'star', reviews:'shield', miniPrograms:'grid', websites:'globe', announcements:'bell', events:'calendar', squarePosts:'calendar', squareFeed:'users', squareInterests:'check', squareReceivedInterests:'users', squareReplies:'chat', squareProfiles:'users' };
 function icon(name) {
   const node = document.createElementNS('http://www.w3.org/2000/svg', 'svg'), use = document.createElementNS('http://www.w3.org/2000/svg', 'use');
   node.classList.add('icon'); node.setAttribute('aria-hidden', 'true'); use.setAttribute('href', '#icon-' + name); node.append(use); return node;
@@ -99,7 +99,7 @@ function renderCatalog() {
   for (const id of ['community','discussions','replies','stars']) leaf(community, id);
   leaf(user, 'favorites');
   const square = branch(user, '校园广场', false, 'users');
-  for (const id of ['squarePosts', 'squareInterests', 'squareReplies', 'squareProfiles']) leaf(square, id);
+  for (const id of ['squarePosts', 'squareInterests', 'squareReceivedInterests', 'squareReplies', 'squareProfiles']) leaf(square, id);
   const directory = branch($('sections'), '公共快速访问', true, 'globe');
   leaf(directory, 'miniPrograms'); leaf(directory, 'websites');
   const operations = branch($('sections'), '公共内容与审核', false, 'shield');
@@ -130,7 +130,7 @@ function inputFor(field, value, row) {
   if (field.type === 'select' && field.maxSelect <= 1) {
     input = document.createElement('select');
     for (const value of ['', ...(field.values || [])]) { const option = document.createElement('option'); option.value = value; option.textContent = value || '请选择'; input.append(option); }
-  } else if (['json','editor','geoPoint'].includes(field.type) || ['content','front','back'].includes(field.name) || field.maxSelect > 1 && field.type !== 'file') {
+  } else if (isMultilineField(field)) {
     input = document.createElement('textarea'); input.rows = field.type === 'json' ? 7 : 5;
   } else input = document.createElement('input');
   input.name = field.name; input.dataset.type = field.type;
@@ -173,7 +173,7 @@ async function openRecord(row = {}) {
   $('record-context').textContent = `${name}${record.id ? ' · ' + record.id : ''} · 保存到当前云端数据库`;
   for (const field of editing.fields) {
     const label = document.createElement('label'); label.textContent = labels[field.name] || field.name;
-    if (['json','editor','file','geoPoint'].includes(field.type) || ['content','front','back'].includes(field.name)) label.className = 'wide';
+    if (field.type === 'file' || isMultilineField(field)) label.className = 'wide';
     const view = workspaceViews[activeView];
     const defaults = { owner: view?.personal ? $('owner').value : '', courseId: $('course-context').value, universityId: 'ecnu', schemaVersion: 1, kind: view?.kind || view?.globalKind || (view?.target ? 'service' : undefined), payload: view?.target ? { name: '', origin: 'official', isOfficial: true, status: 'active', launchTarget: { type: view.target } } : undefined };
     const value = record[field.name] ?? defaults[field.name];
