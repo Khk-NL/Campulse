@@ -31,7 +31,10 @@ class LoadingView extends StatelessWidget {
             child: CircularProgressIndicator(strokeWidth: 2.5),
           ),
           const SizedBox(height: 12),
-          Text(label ?? l10n.stateLoading, style: Theme.of(context).textTheme.bodyMedium),
+          Text(
+            label ?? l10n.stateLoading,
+            style: Theme.of(context).textTheme.bodyMedium,
+          ),
         ],
       ),
     );
@@ -70,10 +73,14 @@ class EmptyStateView extends StatelessWidget {
             Text(
               message,
               textAlign: TextAlign.center,
-              style: theme.textTheme.bodyMedium
-                  ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
             ),
-            if (action != null) ...<Widget>[const SizedBox(height: 16), action!],
+            if (action != null) ...<Widget>[
+              const SizedBox(height: 16),
+              action!,
+            ],
           ],
         ),
       ),
@@ -83,11 +90,7 @@ class EmptyStateView extends StatelessWidget {
 
 /// 错误 + 重试 / an error with a retry affordance.
 class ErrorRetryView extends StatelessWidget {
-  const ErrorRetryView({
-    required this.onRetry,
-    this.details,
-    super.key,
-  });
+  const ErrorRetryView({required this.onRetry, this.details, super.key});
 
   /// 重试回调 / the retry callback.
   final VoidCallback onRetry;
@@ -113,12 +116,16 @@ class ErrorRetryView extends StatelessWidget {
               Text(
                 details!,
                 textAlign: TextAlign.center,
-                style: theme.textTheme.bodySmall
-                    ?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
               ),
             ],
             const SizedBox(height: 16),
-            FilledButton.tonal(onPressed: onRetry, child: Text(l10n.actionRetry)),
+            FilledButton.tonal(
+              onPressed: onRetry,
+              child: Text(l10n.actionRetry),
+            ),
           ],
         ),
       ),
@@ -143,11 +150,14 @@ class SectionHeader extends StatelessWidget {
       padding: const EdgeInsets.only(bottom: 8, top: 4),
       child: Row(
         children: <Widget>[
-          Text(
-            title,
-            style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+          Expanded(
+            child: Text(
+              title,
+              style: theme.textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.w700,
+              ),
+            ),
           ),
-          const Spacer(),
           ?trailing,
         ],
       ),
@@ -157,12 +167,7 @@ class SectionHeader extends StatelessWidget {
 
 /// 小徽标（分类 / 来源 / 状态）/ a small badge for category, provenance or status.
 class TinyBadge extends StatelessWidget {
-  const TinyBadge({
-    required this.label,
-    this.color,
-    this.icon,
-    super.key,
-  });
+  const TinyBadge({required this.label, this.color, this.icon, super.key});
 
   /// 徽标文案 / the badge label.
   final String label;

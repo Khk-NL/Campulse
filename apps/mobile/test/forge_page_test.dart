@@ -145,6 +145,41 @@ class PendingForge extends FakeForge {
 }
 
 void main() {
+  testWidgets(
+    'repository topics filter the feed while source links stay validated',
+    (tester) async {
+      tester.view.devicePixelRatio = 1;
+      tester.view.physicalSize = const Size(900, 1100);
+      addTearDown(tester.view.reset);
+      final repo = FakeForge();
+      repo.rows.addAll([
+        RecordModel.fromJson({
+          'id': 'project1',
+          'name': 'Flutter 校园工具',
+          'summary': '课程与资料整理',
+          'topics': 'Flutter, Dart',
+          'visibility': 'public',
+          'reviewState': 'approved',
+          'repositoryUrl': 'https://github.com/Khk-NL/Campulse',
+        }),
+        RecordModel.fromJson({
+          'id': 'project2',
+          'name': '其他工具',
+          'topics': '',
+          'repositoryUrl': 'javascript:alert(1)',
+        }),
+      ]);
+      await tester.pumpWidget(MaterialApp(home: ForgePage(repository: repo)));
+      await tester.pumpAndSettle();
+      expect(find.text('GitHub 源码'), findsOneWidget);
+      await tester.tap(find.widgetWithText(ActionChip, 'Flutter'));
+      await tester.pumpAndSettle();
+      expect(repo.queries.last, 'Flutter');
+      expect(find.text('其他工具'), findsNothing);
+      expect(find.text('项目仓库'), findsNothing);
+      expect(tester.takeException(), isNull);
+    },
+  );
   test(
     'discussion filters preserve project scope and pagination on the wire',
     () async {

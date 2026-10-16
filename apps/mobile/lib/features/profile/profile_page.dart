@@ -272,7 +272,13 @@ class _ProfilePageState extends State<ProfilePage> {
               .join(', ');
 
     return Card(
-      color: theme.colorScheme.primaryContainer.withValues(alpha: .3),
+      color: theme.colorScheme.surface,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(24),
+        side: BorderSide(
+          color: theme.colorScheme.primary.withValues(alpha: .18),
+        ),
+      ),
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -281,7 +287,7 @@ class _ProfilePageState extends State<ProfilePage> {
             Row(
               children: <Widget>[
                 CircleAvatar(
-                  radius: 22,
+                  radius: 30,
                   backgroundColor: theme.colorScheme.primaryContainer,
                   child: Icon(
                     _avatarIcons[state.avatarStyle],
@@ -295,7 +301,7 @@ class _ProfilePageState extends State<ProfilePage> {
                     children: <Widget>[
                       Text(
                         name,
-                        style: theme.textTheme.titleMedium?.copyWith(
+                        style: theme.textTheme.headlineSmall?.copyWith(
                           fontWeight: FontWeight.w700,
                         ),
                       ),

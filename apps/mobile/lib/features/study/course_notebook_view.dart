@@ -2,6 +2,7 @@ import 'package:campus_mobile/data/models/course.dart';
 import 'package:campus_mobile/features/study/course_note_repository.dart';
 import 'package:campus_mobile/features/study/study_repository.dart';
 import 'package:campus_mobile/features/study/task_planner.dart';
+import 'package:campus_mobile/features/shared/widgets/workspace_layout.dart';
 import 'package:flutter/material.dart';
 
 /// A mobile-first course workspace: sources, questions, then work products.
@@ -255,15 +256,40 @@ class _CourseNotebookViewState extends State<CourseNotebookView> {
         ),
         Expanded(
           child: desktop && _tab != 2
-              ? Row(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    SizedBox(width: 310, child: _sourcePanel(context)),
-                    const VerticalDivider(width: 1),
-                    Expanded(child: _questionPanel(context)),
-                    const VerticalDivider(width: 1),
-                    SizedBox(width: 320, child: _studioPanel(context)),
-                  ],
+              ? Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      SizedBox(
+                        width: 300,
+                        child: WorkspacePanel(
+                          title: '资料来源',
+                          icon: Icons.library_books_outlined,
+                          count: _selected.length,
+                          child: _sourcePanel(context),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: WorkspacePanel(
+                          title: '提问与探究',
+                          icon: Icons.forum_outlined,
+                          count: _sessions.length,
+                          child: _questionPanel(context),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      SizedBox(
+                        width: 300,
+                        child: WorkspacePanel(
+                          title: '创作与复习',
+                          icon: Icons.auto_awesome_outlined,
+                          child: _studioPanel(context),
+                        ),
+                      ),
+                    ],
+                  ),
                 )
               : switch (_tab) {
                   0 => _sourcePanel(context),
@@ -314,6 +340,30 @@ class _CourseNotebookViewState extends State<CourseNotebookView> {
         ],
       ),
       const SizedBox(height: 12),
+      Row(
+        children: [
+          Expanded(
+            child: Text(
+              '已选 ${_selected.length} 份资料',
+              style: Theme.of(context).textTheme.labelMedium,
+            ),
+          ),
+          TextButton(
+            onPressed: () => setState(() {
+              if (_selected.length == _knownIds.length) {
+                _selected.clear();
+              } else {
+                _selected.addAll(_knownIds);
+              }
+            }),
+            child: Text(
+              _selected.length == _knownIds.length && _knownIds.isNotEmpty
+                  ? '清空选择'
+                  : '全部选择',
+            ),
+          ),
+        ],
+      ),
       if (_sources.isEmpty && widget.notes.isEmpty)
         const _NotebookEmpty(
           icon: Icons.library_add_outlined,
@@ -446,6 +496,22 @@ class _CourseNotebookViewState extends State<CourseNotebookView> {
                     hintText: '例如：这两个概念有什么区别？',
                     border: OutlineInputBorder(),
                   ),
+                ),
+                const SizedBox(height: 10),
+                Wrap(
+                  spacing: 6,
+                  runSpacing: 6,
+                  children: [
+                    for (final prompt in const [
+                      '梳理这份资料的核心概念',
+                      '用例子解释关键知识点',
+                      '比较资料中的不同观点',
+                    ])
+                      ActionChip(
+                        label: Text(prompt),
+                        onPressed: () => _question.text = prompt,
+                      ),
+                  ],
                 ),
                 const SizedBox(height: 12),
                 Align(

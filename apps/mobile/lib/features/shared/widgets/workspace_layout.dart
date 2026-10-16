@@ -35,17 +35,23 @@ class WorkspaceBanner extends StatelessWidget {
         ),
       ),
       child: Container(
-        padding: const EdgeInsets.all(22),
+        padding: EdgeInsets.all(
+          MediaQuery.sizeOf(context).height < 600 ? 14 : 20,
+        ),
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(24),
-          border: Border.all(color: colors.primary.withValues(alpha: .14)),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: colors.outlineVariant.withValues(alpha: .6),
+          ),
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
             colors: [
-              colors.primaryContainer.withValues(alpha: .6),
               colors.surface,
-              colors.secondaryContainer.withValues(alpha: .55),
+              Color.alphaBlend(
+                colors.secondaryContainer.withValues(alpha: .35),
+                colors.surface,
+              ),
             ],
           ),
         ),
@@ -58,12 +64,13 @@ class WorkspaceBanner extends StatelessWidget {
                 children: [
                   Text(
                     eyebrow,
-                    style: theme.textTheme.labelLarge?.copyWith(
+                    style: theme.textTheme.labelSmall?.copyWith(
                       color: colors.primary,
-                      letterSpacing: 1.2,
+                      letterSpacing: 1.5,
+                      fontWeight: FontWeight.w700,
                     ),
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 6),
                   Text(
                     title,
                     style: theme.textTheme.headlineSmall?.copyWith(
@@ -87,7 +94,7 @@ class WorkspaceBanner extends StatelessWidget {
             const SizedBox(width: 12),
             DecoratedBox(
               decoration: BoxDecoration(
-                color: colors.surface.withValues(alpha: .8),
+                color: colors.primaryContainer.withValues(alpha: .5),
                 borderRadius: BorderRadius.circular(16),
               ),
               child: Padding(
@@ -103,7 +110,7 @@ class WorkspaceBanner extends StatelessWidget {
 }
 
 /// A real action, with one shared hover/focus treatment across entry points.
-class WorkspaceAction extends StatelessWidget {
+class WorkspaceAction extends StatefulWidget {
   const WorkspaceAction({
     super.key,
     required this.title,
@@ -111,51 +118,198 @@ class WorkspaceAction extends StatelessWidget {
     required this.icon,
     required this.onTap,
     this.color,
+    this.selected = false,
   });
   final String title;
   final String subtitle;
   final IconData icon;
   final VoidCallback onTap;
   final Color? color;
+  final bool selected;
+
+  @override
+  State<WorkspaceAction> createState() => _WorkspaceActionState();
+}
+
+class _WorkspaceActionState extends State<WorkspaceAction> {
+  bool _hovered = false, _focused = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final accent = widget.color ?? theme.colorScheme.primary;
+    final highlighted = _hovered || _focused || widget.selected;
+    return AnimatedContainer(
+      duration: MediaQuery.disableAnimationsOf(context)
+          ? Duration.zero
+          : const Duration(milliseconds: 160),
+      decoration: BoxDecoration(
+        color: Color.alphaBlend(
+          accent.withValues(alpha: highlighted ? .09 : .035),
+          theme.colorScheme.surface,
+        ),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(
+          color: highlighted
+              ? accent.withValues(alpha: .65)
+              : theme.colorScheme.outlineVariant.withValues(alpha: .6),
+        ),
+      ),
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(18),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: widget.onTap,
+          onHover: (value) => setState(() => _hovered = value),
+          onFocusChange: (value) => setState(() => _focused = value),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              children: [
+                CircleAvatar(
+                  backgroundColor: accent.withValues(alpha: .12),
+                  foregroundColor: accent,
+                  child: Icon(widget.icon),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(widget.title, style: theme.textTheme.titleSmall),
+                      const SizedBox(height: 4),
+                      Text(
+                        widget.subtitle,
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Semantics(
+                  selected: widget.selected ? true : null,
+                  child: Icon(
+                    widget.selected
+                        ? Icons.radio_button_checked
+                        : Icons.arrow_forward_rounded,
+                    size: 18,
+                    color: accent,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// A measured value with a label; callers supply actual record counts.
+class WorkspaceMetric extends StatelessWidget {
+  const WorkspaceMetric({
+    super.key,
+    required this.value,
+    required this.label,
+    required this.icon,
+    this.color,
+  });
+  final String value, label;
+  final IconData icon;
+  final Color? color;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final accent = color ?? theme.colorScheme.primary;
-    return Card(
-      margin: EdgeInsets.zero,
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Row(
-            children: [
-              CircleAvatar(
-                backgroundColor: accent.withValues(alpha: .12),
-                foregroundColor: accent,
-                child: Icon(icon),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(title, style: theme.textTheme.titleSmall),
-                    const SizedBox(height: 4),
-                    Text(
-                      subtitle,
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: theme.colorScheme.onSurfaceVariant,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const Icon(Icons.arrow_outward_rounded, size: 18),
-            ],
-          ),
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Color.alphaBlend(
+          accent.withValues(alpha: .06),
+          theme.colorScheme.surface,
         ),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: accent.withValues(alpha: .14)),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, color: accent, size: 22),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  value,
+                  style: theme.textTheme.titleLarge?.copyWith(color: accent),
+                ),
+                Text(
+                  label,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class WorkspacePanel extends StatelessWidget {
+  const WorkspacePanel({
+    super.key,
+    required this.title,
+    required this.icon,
+    required this.child,
+    this.count,
+  });
+  final String title;
+  final IconData icon;
+  final Widget child;
+  final int? count;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    return Container(
+      clipBehavior: Clip.antiAlias,
+      decoration: BoxDecoration(
+        color: colors.surface,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: colors.outlineVariant.withValues(alpha: .65)),
+      ),
+      child: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            child: Row(
+              children: [
+                Icon(icon, size: 19, color: colors.primary),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    title,
+                    style: Theme.of(context).textTheme.titleSmall,
+                  ),
+                ),
+                if (count != null)
+                  Text(
+                    '$count',
+                    style: Theme.of(context).textTheme.labelLarge
+                        ?.copyWith(color: colors.onSurfaceVariant),
+                  ),
+              ],
+            ),
+          ),
+          const Divider(height: 1),
+          Expanded(child: child),
+        ],
       ),
     );
   }
@@ -170,7 +324,10 @@ class WorkspaceGrid extends StatelessWidget {
   @override
   Widget build(BuildContext context) => LayoutBuilder(
     builder: (context, constraints) {
-      final columns = (constraints.maxWidth / minWidth).floor().clamp(1, 3);
+      final columns = (constraints.maxWidth / minWidth).floor().clamp(
+        1,
+        children.length.clamp(1, 3),
+      );
       final width = (constraints.maxWidth - 12 * (columns - 1)) / columns;
       return Wrap(
         spacing: 12,

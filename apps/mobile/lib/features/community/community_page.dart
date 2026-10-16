@@ -221,13 +221,29 @@ class _CommunityPageState extends State<CommunityPage> {
                   showCheckmark: false,
                   onSelected: (_) => change(() => kind = null),
                 ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            WorkspaceGrid(
+              minWidth: 170,
+              children: [
                 for (final entry in communityKinds.entries)
-                  ChoiceChip(
-                    label: Text(entry.value),
-                    avatar: Icon(_kindIcons[entry.key], size: 18),
+                  WorkspaceAction(
+                    title: entry.value,
+                    subtitle: const {
+                      'competition': '找队友 · 做项目',
+                      'sport': '约场地 · 一起运动',
+                      'study': '共读 · 自习 · 交流',
+                      'social': '兴趣相遇 · 认识同学',
+                    }[entry.key]!,
+                    icon: _kindIcons[entry.key]!,
                     selected: kind == entry.key,
-                    showCheckmark: false,
-                    onSelected: (_) => change(() => kind = entry.key),
+                    color: entry.key == 'competition'
+                        ? Theme.of(context).colorScheme.secondary
+                        : entry.key == 'sport'
+                        ? Theme.of(context).colorScheme.tertiary
+                        : Theme.of(context).colorScheme.primary,
+                    onTap: () => change(() => kind = entry.key),
                   ),
               ],
             ),
@@ -306,8 +322,18 @@ class _CommunityPageState extends State<CommunityPage> {
   Widget _postCard(RecordModel item) {
     final color = Theme.of(context).colorScheme;
     final kind = item.getStringValue('kind');
+    final accent = switch (kind) {
+      'competition' => color.secondary,
+      'sport' => color.tertiary,
+      'study' => color.primary,
+      _ => color.tertiary,
+    };
     final date = _date(item.getStringValue('startsAt'));
     return Card(
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(20),
+        side: BorderSide(color: accent.withValues(alpha: .25)),
+      ),
       margin: EdgeInsets.zero,
       clipBehavior: Clip.antiAlias,
       child: InkWell(
@@ -327,8 +353,8 @@ class _CommunityPageState extends State<CommunityPage> {
               Row(
                 children: [
                   CircleAvatar(
-                    backgroundColor: color.secondaryContainer,
-                    foregroundColor: color.onSecondaryContainer,
+                    backgroundColor: accent.withValues(alpha: .12),
+                    foregroundColor: accent,
                     child: Icon(_kindIcons[kind] ?? Icons.groups_outlined),
                   ),
                   const SizedBox(width: 10),
@@ -340,6 +366,15 @@ class _CommunityPageState extends State<CommunityPage> {
                 ],
               ),
               const SizedBox(height: 14),
+              Container(
+                height: 3,
+                width: 40,
+                decoration: BoxDecoration(
+                  color: accent,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const SizedBox(height: 12),
               Text(
                 item.getStringValue('title'),
                 style: Theme.of(context).textTheme.titleMedium,

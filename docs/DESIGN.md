@@ -1,6 +1,32 @@
 # 界面设计
 
-更新：2026-10-15。当前界面以亮色、华师大红与柔金黄为默认基调，客户端支持深色模式和自定义主题色。
+更新：2026-10-16。默认采用暖白、华师大红、柔金黄与蓝紫，支持深色模式和自定义主题。产品对标按任务组织、信息密度、操作反馈和数据持久化分别验收。
+
+## 功能对标与本轮落点
+
+| 功能 | 参考产品或校园实现 | Campulse 的界面与交互 |
+| --- | --- | --- |
+| 首页与今日安排 | Todoist Today、求是潮手机站 | 个人计划、今日课程/活动和公共消息分区，新增任务可直接写入；计划进度由真实完成数计算 |
+| 任务管理 | Todoist、Super Productivity | 今天、未来七天、逾期和全部时间；保留优先级、标签、子任务、预计用时、完成归档和恢复 |
+| 课程列表 | NotebookLM 的独立知识空间、旦挞课表 | 课程是一级对象，保留搜索、置顶和列表/课表切换，点击进入该课程的学习空间 |
+| 课表与导入 | 求是潮手机站、sp-study-courses | 教学周、节次、调停课、冲突与 CSV 校验；沿用现有行为和个人课程云端保存 |
+| 资料来源 | NotebookLM Sources | 资料列表支持全部选择/清空，显示真实选择数，PDF 与文字可分别查找 |
+| 笔记与教材库 | NotebookLM、Open Notebook | 标题/正文搜索、PDF/文字分类、按更新时间排列、类型计数和阅读/编辑入口 |
+| 提问与证据 | NotebookLM Chat | 显示引用范围与快捷问题，宽屏与资料并排；问题记录连接已有探究与 AI 对话流程 |
+| 学习成果 | NotebookLM Studio、EduWork | 独立成果面板，保留测验、闪卡、导图、历史和编辑；按钮连接已有远程工作台 |
+| 复习卡片 | Anki | 到期与全部卡片分组、真实数量、最早到期卡片的开始入口，先回想再显示答案并评分 |
+| 快速访问与收藏 | 旦挞、求是潮手机站 | 公共目录、服务类型与折叠标签，收藏跨分类归集；网站与小程序沿用已有启动链路 |
+| 项目发现与个人仓库 | GitHub Repositories | 仓库名称、介绍、话题、公开状态和审核状态分层；话题可直接筛选，GitHub 源码直接跳转 |
+| 项目讨论与回复 | GitHub Issues / Discussions | 项目上下文、讨论状态、回复与重新开启沿用现有数据；访问范围继承项目审核与可见性 |
+| 校园召集 | 旦挞论坛的校园分区、现有校园搭子活动 | 竞赛、运动、学习与扩列采用独立彩色入口；保留校区筛选、发布、报名、退出和讨论 |
+| 兴趣名片与个人中心 | 校园社区的个人空间 | 自主公开名片，个人身份与内容入口分区；设置、关于继续折叠，主题和昵称可编辑 |
+| 搜索、通知与表单 | Todoist 的搜索组织、GitHub 的上下文操作 | 继承统一输入、列表、弹窗、状态与错误反馈；结果按现有权限和数据来源展示 |
+| 运营台 | GitHub 项目状态与分层管理思路 | 保持用户—学习—项目—报名关系，公共服务独立管理；现有真实数据库操作继续使用 |
+| Android / Windows | 旦挞 Flutter 多端 | 共用业务实现，宽屏侧栏及三面板、手机单列；保存后另一端刷新读回 |
+
+本轮新交互集中在计划时间筛选、资料查找、复习入口和项目话题；课表、测验、讨论与运营台通过共享主题统一外观，原有业务保持。对标表记录设计依据和实现范围，下一轮逐项补齐产品深度。
+
+参考资料：[Todoist 今日视图](https://www.todoist.com/help/todoist/get-started/plan-your-day-with-the-today-view-UVUXaiSs)、[NotebookLM 知识空间与 Studio](https://support.google.com/notebooklm/answer/16206563?hl=en)、[Anki 复习流程](https://docs.ankiweb.net/studying.html)、[GitHub Discussions](https://docs.github.com/en/discussions/quickstart)、[Super Productivity](https://github.com/super-productivity/super-productivity)、[旦挞](https://github.com/DanXi-Dev/DanXi)、[求是潮手机站](https://www.qsc.zju.edu.cn/mobile)。这些来源提供功能组织依据，Campulse 的取舍见上表；开源代码与产品参考分别登记在[开源使用](OPEN_SOURCE_USAGE.md)。
 
 ## 色彩与标识
 
@@ -23,7 +49,7 @@
 
 高校案例与实际取舍见[路线图](ROADMAP.md#学生项目社区核实与高校参考)：交大 Skill 集市的来源分区、TUNA 的服务与反馈入口、浙大平台的资源联通。界面设计借鉴与源码使用分别登记。
 
-整体工作区采用共享 `WorkspaceBanner`、`WorkspaceAction`、`WorkspaceGrid`。红、金和蓝紫随主题令牌变化；页首渐入尊重系统减少动画选项。PC 使用侧栏与多列内容，课程资料、提问、成果在宽屏并列；手机保持单列滚动。布局阈值和键盘操作见[桌面说明](DESKTOP.md)。
+整体工作区采用共享 `WorkspaceBanner`、`WorkspaceAction`、`WorkspaceGrid`、`WorkspaceMetric` 与 `WorkspacePanel`。页头压缩为轻量标题与操作，顶部栏改为浅色，品牌色用于焦点、主操作与状态。统计读取真实记录，网格列数同时受宽度和内容数量约束。红、金和蓝紫随主题变化；悬停、键盘焦点及选中状态分别维护，动效遵循系统减少动画选项。PC 使用侧栏与独立资料/提问/成果面板；手机保持单列滚动。布局阈值和键盘操作见[桌面说明](DESKTOP.md)。
 
 ## 交互与动效
 
@@ -42,3 +68,9 @@
 ## 验证入口
 
 运营台布局与文案检查位于 `scripts/admin-console.test.mjs`、`scripts/ui-copy.test.mjs`；浏览器场景位于 `scripts/admin-console.browser.js`。移动端通过相关 Widget 测试及实际设备检查布局、输入、生成反馈和重启恢复。结果统一写入[验收记录](ACCEPTANCE.md)。
+
+`test/ui_refinement_test.dart` 检查日期筛选、资料分类与正文搜索、到期卡片入口，以及 320 宽度/1.6 倍字号/深浅主题。设置 `CAPTURE_UI=true` 可生成忽略目录中的布局预览；预览字体通过 `CAMPULSE_UI_FONT`、`CAMPULSE_UI_ICON_FONT` 指向本机字体，仅用于人工检查，发布包沿用实际平台字体。
+
+## 接下来的体验工作
+
+优先完成同版本 Android / Windows 的真实账号输入、资料导入、评分与重启读回；随后推进连续复习队列、资料文件夹/多选维护、学习记录时间线、项目贡献入口和社区通知。校方课程接口、微信资质和正式域名按各自授权及发布流程推进。

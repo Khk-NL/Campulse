@@ -1,5 +1,6 @@
 import 'package:campus_mobile/data/models/course.dart';
 import 'package:campus_mobile/features/study/study_repository.dart';
+import 'package:campus_mobile/features/shared/widgets/workspace_layout.dart';
 import 'package:flutter/material.dart';
 
 /// Personal plans share the existing owner-scoped study workspace.
@@ -24,6 +25,23 @@ class _TaskPlannerState extends State<TaskPlanner> {
   String _query = '';
   String? _tag;
   int _sort = 0;
+  String _timeScope = 'all';
+
+  bool _matchesTime(StudyActivity task, DateTime today) {
+    final due = task.dueDate;
+    return switch (_timeScope) {
+      'today' =>
+        due != null &&
+            !due.isBefore(today) &&
+            due.isBefore(today.add(const Duration(days: 1))),
+      'week' =>
+        due != null &&
+            !due.isBefore(today) &&
+            due.isBefore(today.add(const Duration(days: 7))),
+      'overdue' => due != null && due.isBefore(today),
+      _ => true,
+    };
+  }
 
   List<StudyActivity> get _tasks =>
       widget.activities.where((StudyActivity x) => !x.isNotebook).toList();
@@ -57,6 +75,8 @@ class _TaskPlannerState extends State<TaskPlanner> {
   @override
   Widget build(BuildContext context) {
     final List<StudyActivity> tasks = _tasks;
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
     final List<StudyActivity> section = tasks
         .where((StudyActivity x) => x.isCompleted == _completed)
         .toList();
@@ -71,6 +91,7 @@ class _TaskPlannerState extends State<TaskPlanner> {
     final List<StudyActivity> visible = section
         .where(
           (StudyActivity x) =>
+              (_completed || _matchesTime(x, today)) &&
               (tag == null || x.tags.contains(tag)) &&
               '${x.title} ${x.objective} ${x.course} ${x.tags.join(' ')}'
                   .toLowerCase()
@@ -89,6 +110,13 @@ class _TaskPlannerState extends State<TaskPlanner> {
     return ListView(
       padding: const EdgeInsets.all(16),
       children: <Widget>[
+        WorkspaceBanner(
+          eyebrow: 'YOUR NEXT STEP',
+          title: widget.course?.name ?? '我的计划',
+          subtitle: '收集想法，安排优先级，一件一件完成。',
+          icon: Icons.checklist_rounded,
+        ),
+        const SizedBox(height: 16),
         SegmentedButton<bool>(
           showSelectedIcon: false,
           segments: <ButtonSegment<bool>>[
@@ -110,6 +138,27 @@ class _TaskPlannerState extends State<TaskPlanner> {
           }),
         ),
         const SizedBox(height: 12),
+        if (!_completed) ...[
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              for (final entry in const {
+                'all': '全部时间',
+                'today': '今天',
+                'week': '未来七天',
+                'overdue': '逾期待办',
+              }.entries)
+                ChoiceChip(
+                  showCheckmark: false,
+                  label: Text(entry.value),
+                  selected: _timeScope == entry.key,
+                  onSelected: (_) => setState(() => _timeScope = entry.key),
+                ),
+            ],
+          ),
+          const SizedBox(height: 12),
+        ],
         Row(
           children: <Widget>[
             Expanded(
@@ -173,7 +222,11 @@ class _TaskPlannerState extends State<TaskPlanner> {
                   : '添加计划，安排接下来的事',
             ),
           ),
-        for (final StudyActivity task in visible) _tile(context, task),
+        for (final StudyActivity task in visible)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: _tile(context, task),
+          ),
       ],
     );
   }
@@ -181,11 +234,22 @@ class _TaskPlannerState extends State<TaskPlanner> {
   Widget _tile(BuildContext context, StudyActivity task) {
     final DateTime? due = task.dueDate;
     final DateTime now = DateTime.now();
+    final dueLabel = due == null
+        ? task.deadline
+        : MaterialLocalizations.of(context).formatMediumDate(due.toLocal());
     final bool overdue =
         !task.isCompleted &&
         due != null &&
         due.isBefore(DateTime(now.year, now.month, now.day));
     return Card(
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(
+          color: overdue
+              ? Theme.of(context).colorScheme.error.withValues(alpha: .5)
+              : Theme.of(context).colorScheme.outlineVariant,
+        ),
+      ),
       child: Column(
         children: <Widget>[
           ListTile(
@@ -203,7 +267,7 @@ class _TaskPlannerState extends State<TaskPlanner> {
               [
                 if (widget.course == null) task.course,
                 if (task.deadline.isNotEmpty && task.deadline != '未设定')
-                  '${overdue ? '已逾期 · ' : ''}${task.deadline}',
+                  '${overdue ? '已逾期 · ' : ''}$dueLabel',
                 if (task.priority > 0) task.priority == 2 ? '高优先级' : '中优先级',
                 if (task.estimateMinutes > 0) '预计 ${task.estimateMinutes} 分钟',
                 if (task.subtasks.isNotEmpty)

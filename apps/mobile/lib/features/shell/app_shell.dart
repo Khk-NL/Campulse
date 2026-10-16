@@ -179,11 +179,11 @@ class _AppShellState extends State<AppShell>
                 tooltip: '刷新云端数据',
                 onPressed: _refreshing ? null : _refresh,
                 icon: _refreshing
-                    ? const SizedBox.square(
+                    ? SizedBox.square(
                         dimension: 18,
                         child: CircularProgressIndicator(
                           strokeWidth: 2,
-                          color: Colors.white,
+                          color: Theme.of(context).colorScheme.primary,
                         ),
                       )
                     : const Icon(Icons.cloud_sync_outlined),

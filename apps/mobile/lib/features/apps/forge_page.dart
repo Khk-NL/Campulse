@@ -199,43 +199,7 @@ class _ForgePageState extends State<ForgePage> {
                               padding: EdgeInsets.all(32),
                               child: Text('从一个校园需求开始，发布项目或调整搜索词。'),
                             ),
-                          for (final item in rows.items)
-                            Card(
-                              child: ListTile(
-                                contentPadding: const EdgeInsets.all(16),
-                                leading: CircleAvatar(
-                                  backgroundColor: Theme.of(context)
-                                      .colorScheme
-                                      .tertiaryContainer,
-                                  foregroundColor: Theme.of(context)
-                                      .colorScheme
-                                      .onTertiaryContainer,
-                                  child: const Icon(Icons.source_outlined),
-                                ),
-                                title: Text(item.getStringValue('name')),
-                                subtitle: Text(
-                                  '${item.getStringValue('summary')}\n${item.getStringValue('topics')} · ${_reviewLabel(item)}',
-                                ),
-                                isThreeLine: true,
-                                trailing: Icon(
-                                  item.getStringValue('visibility') == 'private'
-                                      ? Icons.lock_outline
-                                      : Icons.chevron_right,
-                                ),
-                                onTap: () => Navigator.of(context)
-                                    .push(
-                                      MaterialPageRoute<void>(
-                                        builder: (_) => ForgeProjectPage(
-                                          repo: repo!,
-                                          id: item.id,
-                                        ),
-                                      ),
-                                    )
-                                    .then((_) {
-                                      if (mounted) setState(load);
-                                    }),
-                              ),
-                            ),
+                          for (final item in rows.items) _repositoryCard(item),
                           _Pager(
                             page: page,
                             total: rows.totalPages,
@@ -253,6 +217,126 @@ class _ForgePageState extends State<ForgePage> {
             ],
           ),
   );
+
+  Widget _repositoryCard(RecordModel item) {
+    final theme = Theme.of(context);
+    final topics = item
+        .getStringValue('topics')
+        .split(RegExp(r'[,，\s]+'))
+        .where((value) => value.isNotEmpty)
+        .take(6)
+        .toList();
+    final github = Uri.tryParse(item.getStringValue('repositoryUrl'));
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Card(
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: () async {
+            await Navigator.of(context).push<void>(
+              MaterialPageRoute(
+                builder: (_) => ForgeProjectPage(repo: repo!, id: item.id),
+              ),
+            );
+            if (mounted) setState(load);
+          },
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(
+                      Icons.book_outlined,
+                      color: theme.colorScheme.primary,
+                      size: 20,
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        item.getStringValue('name'),
+                        style: theme.textTheme.titleMedium?.copyWith(
+                          color: theme.colorScheme.primary,
+                        ),
+                      ),
+                    ),
+                    Icon(
+                      item.getStringValue('visibility') == 'private'
+                          ? Icons.lock_outline
+                          : Icons.public,
+                      size: 18,
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                  ],
+                ),
+                if (item.getStringValue('summary').isNotEmpty) ...[
+                  const SizedBox(height: 10),
+                  Text(
+                    item.getStringValue('summary'),
+                    maxLines: 3,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+                if (topics.isNotEmpty) ...[
+                  const SizedBox(height: 12),
+                  Wrap(
+                    spacing: 6,
+                    runSpacing: 6,
+                    children: [
+                      for (final topic in topics)
+                        ActionChip(
+                          label: Text(topic),
+                          onPressed: () {
+                            searchController.text = topic;
+                            search(topic);
+                          },
+                        ),
+                    ],
+                  ),
+                ],
+                const SizedBox(height: 14),
+                Wrap(
+                  spacing: 16,
+                  runSpacing: 8,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  children: [
+                    Text(
+                      _reviewLabel(item),
+                      style: theme.textTheme.labelMedium?.copyWith(
+                        color: theme.colorScheme.tertiary,
+                      ),
+                    ),
+                    if (github != null &&
+                        github.scheme == 'https' &&
+                        github.host == 'github.com')
+                      TextButton.icon(
+                        onPressed: () async {
+                          final opened = await openUrlExternally(github);
+                          if (!opened && mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('请检查浏览器后重试打开链接')),
+                            );
+                          }
+                        },
+                        icon: const Icon(Icons.open_in_new, size: 16),
+                        label: const Text('GitHub 源码'),
+                      ),
+                    Text(
+                      '查看项目与讨论',
+                      style: theme.textTheme.labelMedium?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 class ForgeProjectPage extends StatefulWidget {

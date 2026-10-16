@@ -86,7 +86,7 @@ void main() {
       MaterialApp(home: StudyPage(repository: store, plansOnly: true)),
     );
     await tester.pumpAndSettle();
-    expect(find.byType(ChoiceChip), findsNothing);
+    expect(find.widgetWithText(ChoiceChip, '全部标签'), findsNothing);
     await tester.tap(find.byTooltip('新建计划'));
     await tester.pumpAndSettle();
     final fields = find.descendant(

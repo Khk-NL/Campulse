@@ -1,4 +1,5 @@
 import 'package:campus_mobile/features/study/review_card_repository.dart';
+import 'package:campus_mobile/features/shared/widgets/workspace_layout.dart';
 import 'package:flutter/material.dart';
 
 class ReviewCardsPage extends StatefulWidget {
@@ -22,6 +23,7 @@ class ReviewCardsPage extends StatefulWidget {
 }
 
 class _ReviewCardsPageState extends State<ReviewCardsPage> {
+  bool _dueOnly = false;
   late Future<List<ReviewCard>> _cards = widget.repository.list(
     widget.courseId,
   );
@@ -223,9 +225,50 @@ class _ReviewCardsPageState extends State<ReviewCardsPage> {
         final int due = cards
             .where((ReviewCard card) => card.isDue(now))
             .length;
+        final visible =
+            cards.where((card) => !_dueOnly || card.isDue(now)).toList()
+              ..sort((a, b) => a.due.compareTo(b.due));
         return ListView(
           padding: const EdgeInsets.fromLTRB(16, 12, 16, 90),
           children: <Widget>[
+            WorkspaceBanner(
+              eyebrow: 'SPACED REPETITION',
+              title: '让知识留下来',
+              subtitle: '回想答案，再为掌握程度评分。',
+              icon: Icons.style_outlined,
+              actions: [
+                FilledButton.icon(
+                  onPressed: due == 0
+                      ? null
+                      : () => _review(
+                          (cards.where((card) => card.isDue(now)).toList()
+                                ..sort((a, b) => a.due.compareTo(b.due)))
+                              .first,
+                        ),
+                  icon: const Icon(Icons.play_arrow_rounded),
+                  label: const Text('开始复习'),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            WorkspaceGrid(
+              minWidth: 170,
+              children: [
+                WorkspaceMetric(
+                  value: '$due',
+                  label: '到期卡片',
+                  icon: Icons.bolt_rounded,
+                  color: Theme.of(context).colorScheme.secondary,
+                ),
+                WorkspaceMetric(
+                  value: '${cards.length}',
+                  label: '卡片总数',
+                  icon: Icons.layers_outlined,
+                  color: Theme.of(context).colorScheme.tertiary,
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
             Card(
               child: Padding(
                 padding: const EdgeInsets.all(18),
@@ -235,57 +278,86 @@ class _ReviewCardsPageState extends State<ReviewCardsPage> {
                 ),
               ),
             ),
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 8,
+              children: [
+                ChoiceChip(
+                  showCheckmark: false,
+                  label: const Text('全部卡片'),
+                  selected: !_dueOnly,
+                  onSelected: (_) => setState(() => _dueOnly = false),
+                ),
+                ChoiceChip(
+                  showCheckmark: false,
+                  label: const Text('到期复习'),
+                  selected: _dueOnly,
+                  onSelected: (_) => setState(() => _dueOnly = true),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
             if (cards.isEmpty)
               const Padding(
                 padding: EdgeInsets.all(24),
                 child: Center(child: Text('从笔记制作卡片，或直接新建卡片。')),
               ),
-            for (final ReviewCard card in cards)
-              Card(
-                child: ListTile(
-                  leading: CircleAvatar(
-                    backgroundColor: card.isDue(now)
-                        ? Theme.of(context).colorScheme.tertiaryContainer
-                        : Theme.of(context).colorScheme.secondaryContainer,
-                    child: Icon(card.isDue(now) ? Icons.bolt : Icons.schedule),
-                  ),
-                  title: Text(
-                    card.front,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  subtitle: Text(
-                    '${card.isDue(now) ? '现在复习' : '下次：${card.due.toLocal().toString().substring(0, 16)}'} · 已复习 ${card.reviewHistory.length} 次',
-                  ),
-                  onTap: () => _review(card),
-                  trailing: PopupMenuButton<String>(
-                    onSelected: (String action) async {
-                      if (action == 'edit') {
-                        await _edit(card);
-                        return;
-                      }
-                      try {
-                        await widget.repository.delete(card.id);
-                        if (mounted) _reload();
-                      } on Exception catch (error) {
-                        if (mounted) {
-                          ScaffoldMessenger.of(this.context).showSnackBar(
-                            SnackBar(content: Text('删除失败：$error')),
-                          );
+            if (_dueOnly && visible.isEmpty && cards.isNotEmpty)
+              const Padding(
+                padding: EdgeInsets.all(24),
+                child: Text('本轮复习已完成，稍后继续积累。'),
+              ),
+            for (final ReviewCard card in visible)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 10),
+                child: Card(
+                  child: ListTile(
+                    leading: CircleAvatar(
+                      backgroundColor: card.isDue(now)
+                          ? Theme.of(context).colorScheme.tertiaryContainer
+                          : Theme.of(context).colorScheme.secondaryContainer,
+                      child: Icon(
+                        card.isDue(now) ? Icons.bolt : Icons.schedule,
+                      ),
+                    ),
+                    title: Text(
+                      card.front,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    subtitle: Text(
+                      '${card.isDue(now) ? '现在复习' : '下次：${card.due.toLocal().toString().substring(0, 16)}'} · 已复习 ${card.reviewHistory.length} 次',
+                    ),
+                    onTap: () => _review(card),
+                    trailing: PopupMenuButton<String>(
+                      onSelected: (String action) async {
+                        if (action == 'edit') {
+                          await _edit(card);
+                          return;
                         }
-                      }
-                    },
-                    itemBuilder: (BuildContext context) =>
-                        const <PopupMenuEntry<String>>[
-                          PopupMenuItem<String>(
-                            value: 'edit',
-                            child: Text('编辑'),
-                          ),
-                          PopupMenuItem<String>(
-                            value: 'delete',
-                            child: Text('删除'),
-                          ),
-                        ],
+                        try {
+                          await widget.repository.delete(card.id);
+                          if (mounted) _reload();
+                        } on Exception catch (error) {
+                          if (mounted) {
+                            ScaffoldMessenger.of(this.context).showSnackBar(
+                              SnackBar(content: Text('删除失败：$error')),
+                            );
+                          }
+                        }
+                      },
+                      itemBuilder: (BuildContext context) =>
+                          const <PopupMenuEntry<String>>[
+                            PopupMenuItem<String>(
+                              value: 'edit',
+                              child: Text('编辑'),
+                            ),
+                            PopupMenuItem<String>(
+                              value: 'delete',
+                              child: Text('删除'),
+                            ),
+                          ],
+                    ),
                   ),
                 ),
               ),

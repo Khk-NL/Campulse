@@ -46,7 +46,7 @@ class HomeSection<T> extends StatelessWidget {
     final ThemeData theme = Theme.of(context);
     return Card(
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
+        padding: const EdgeInsets.fromLTRB(18, 16, 18, 18),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[

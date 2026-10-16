@@ -1,21 +1,6 @@
-/// Campulse 设计规范 / the Campulse design tokens (§0.3, §0.9 手机优先).
-///
-/// 色值不是猜的：主色取自学校官方的《标准色使用规范》（PANTONE 201C =
-/// `#A41F35`，规范写明"不得任意更改"）；柔金黄与蓝紫作为界面辅助色。所有颜色都从这里
-/// 取，widget 里不允许出现字面量色值——换主题时改动点只有一个。主题文件**只放色值与
-/// 排版规则**，不出现任何高校专有字样（§3.1）。
-///
-/// The colours are not guesses: the primary is the university's official standard colour
-/// (PANTONE 201C = `#A41F35`, which the specification says must not be altered) and the
-/// supporting hues are soft gold and blue-violet. Every colour comes from here; widgets never
-/// hold a literal colour, so re-theming touches one file. This file holds colour values
-/// and typography rules only, never a university-specific string (§3.1).
-///
-/// 视觉基调：**白色为主，标准色作强调**。顶部栏是标准色实色块配白色内容（官方的
-/// "反白应用"），内容区是白底小圆角卡片与发丝分隔线，不做花哨渐变。
-/// Visual key: white-dominant with the standard colour as emphasis. The top bar is a solid
-/// standard-colour block with white content (the specification's reversed application),
-/// and the content area is white, small-radius cards with hairline dividers. No gradients.
+/// Campulse 的共享色彩、排版与组件主题。
+/// 默认品牌红搭配柔金黄和蓝紫，浅色顶部栏与暖白内容底承载信息。
+/// 高校身份由配置层提供，个性化主辅色由 ThemeColors 注入。
 library;
 
 import 'package:flutter/material.dart';
@@ -74,7 +59,7 @@ class CampusColors {
   static const Color surfaceDark = Color(0xFF16121A);
 
   /// 浅色模式下的页面底色 / the light scaffold tint.
-  static const Color scaffoldLight = Color(0xFFFAFAFA);
+  static const Color scaffoldLight = Color(0xFFF7F6F3);
 
   /// 深色模式下的页面底色 / the dark scaffold tint.
   static const Color scaffoldDark = Color(0xFF120F14);
@@ -85,9 +70,8 @@ class CampusColors {
   /// 发丝分隔线（深色）/ the hairline divider, dark mode.
   static const Color hairlineDark = Color(0xFF35272C);
 
-  /// 卡片圆角：官方布局是"小圆角"，因此不用 Material 默认的大圆角。
-  /// The card radius: the official layout uses small radii, not Material's default.
-  static const double cardRadius = 10;
+  /// 内容卡片的共享圆角。
+  static const double cardRadius = 18;
 
   /// 页面横向内边距 / the horizontal page padding.
   static const EdgeInsets pagePadding = EdgeInsets.fromLTRB(16, 8, 16, 24);
@@ -263,15 +247,9 @@ class CampusTheme {
       status = status.copyWith(success: scheme.secondary, danger: scheme.error);
     }
 
-    // 顶部栏：标准色实色块 + 白色内容（官方"反白应用"），深色模式下用更暗的同族色。
-    // The top bar: a solid standard-colour block with white content (the official reversed
-    // application); dark mode uses a darker shade of the same family.
-    final Color appBarBackground = colors != null
-        ? scheme.primary
-        : isDark
-        ? CampusColors.appBarDark
-        : CampusColors.primary;
-    final Color onAppBar = colors != null ? scheme.onPrimary : Colors.white;
+    // 中性顶部栏保留阅读空间，品牌色用于图标、选中态与主要操作。
+    final Color appBarBackground = scheme.surface;
+    final Color onAppBar = scheme.onSurface;
     final Color hairline = colors != null
         ? scheme.outlineVariant
         : isDark
@@ -292,7 +270,56 @@ class CampusTheme {
 
     return base.copyWith(
       extensions: <ThemeExtension<dynamic>>[status],
-      textTheme: base.textTheme.apply(fontSizeFactor: 1.0),
+      textTheme: base.textTheme.copyWith(
+        headlineSmall: base.textTheme.headlineSmall?.copyWith(
+          fontWeight: FontWeight.w700,
+          letterSpacing: -.6,
+        ),
+        titleLarge: base.textTheme.titleLarge?.copyWith(
+          fontWeight: FontWeight.w700,
+          letterSpacing: -.3,
+        ),
+        titleMedium: base.textTheme.titleMedium?.copyWith(
+          fontWeight: FontWeight.w600,
+        ),
+        bodyMedium: base.textTheme.bodyMedium?.copyWith(height: 1.5),
+        bodySmall: base.textTheme.bodySmall?.copyWith(height: 1.45),
+      ),
+      navigationRailTheme: NavigationRailThemeData(
+        backgroundColor: scheme.surface,
+        indicatorColor: scheme.secondaryContainer,
+        selectedIconTheme: IconThemeData(color: scheme.onSecondaryContainer),
+        unselectedIconTheme: IconThemeData(color: scheme.onSurfaceVariant),
+        selectedLabelTextStyle: TextStyle(
+          color: scheme.onSurface,
+          fontWeight: FontWeight.w700,
+        ),
+        unselectedLabelTextStyle: TextStyle(color: scheme.onSurfaceVariant),
+      ),
+      tabBarTheme: TabBarThemeData(
+        labelColor: scheme.primary,
+        unselectedLabelColor: scheme.onSurfaceVariant,
+        indicatorColor: scheme.primary,
+        dividerColor: hairline,
+      ),
+      progressIndicatorTheme: ProgressIndicatorThemeData(
+        color: scheme.primary,
+        linearTrackColor: scheme.secondaryContainer,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      floatingActionButtonTheme: FloatingActionButtonThemeData(
+        backgroundColor: scheme.primary,
+        foregroundColor: scheme.onPrimary,
+        elevation: 3,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+      ),
+      tooltipTheme: TooltipThemeData(
+        waitDuration: const Duration(milliseconds: 450),
+      ),
+      dialogTheme: DialogThemeData(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+      ),
+      bottomSheetTheme: const BottomSheetThemeData(showDragHandle: true),
       cardTheme: CardThemeData(
         elevation: 0,
         margin: EdgeInsets.zero,
@@ -373,17 +400,27 @@ class CampusTheme {
         style: FilledButton.styleFrom(
           backgroundColor: scheme.primary,
           foregroundColor: scheme.onPrimary,
-          minimumSize: const Size(48, 44),
+          minimumSize: const Size(48, 48),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(CampusColors.cardRadius),
+          ),
+        ),
+      ),
+      outlinedButtonTheme: OutlinedButtonThemeData(
+        style: OutlinedButton.styleFrom(
+          minimumSize: const Size(48, 48),
+          side: BorderSide(color: scheme.outlineVariant),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
           ),
         ),
       ),
       // 手机优先：主要控件的点按区域不小于 48dp（§0.9）。
       // Mobile first: primary controls keep a tap target of at least 48dp (§0.9).
       materialTapTargetSize: MaterialTapTargetSize.padded,
-      listTileTheme: const ListTileThemeData(
-        contentPadding: EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+      listTileTheme: ListTileThemeData(
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
       ),
       // 发丝分隔线而不是重投影（官方布局语言）。
       // Hairline dividers rather than heavy shadows (the official layout language).
@@ -398,6 +435,10 @@ class CampusTheme {
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(CampusColors.cardRadius),
           borderSide: BorderSide(color: hairline),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(CampusColors.cardRadius),
+          borderSide: BorderSide(color: scheme.primary, width: 2),
         ),
         contentPadding: const EdgeInsets.symmetric(
           horizontal: 12,

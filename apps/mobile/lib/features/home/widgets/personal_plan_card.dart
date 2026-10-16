@@ -161,6 +161,14 @@ class _PersonalPlanCardState extends State<PersonalPlanCard> {
               ],
             ),
             const SizedBox(height: 12),
+            if (activities.isNotEmpty) ...[
+              Semantics(
+                label: '计划完成进度',
+                value: '$completed / ${activities.length}',
+                child: LinearProgressIndicator(value: completed / activities.length, minHeight: 6),
+              ),
+              const SizedBox(height: 14),
+            ],
             Wrap(
               spacing: 8,
               runSpacing: 8,
