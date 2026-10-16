@@ -1,6 +1,8 @@
 # Add this site block to the EXISTING Caddy configuration after backing it up.
 # Do not replace other sites. Validate before gracefully reloading Caddy.
 campus.scsldr.cn, campus.allezafrique.cn {
+    encode /app/* zstd gzip
+    header /app/* Cache-Control "no-cache"
     handle_path /ai/* {
         reverse_proxy 127.0.0.1:8787
     }

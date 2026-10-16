@@ -11,6 +11,15 @@
 - 人工查看 1440×1000 的品牌侧栏/页头与 PDF 阅读、390×844 的测验布局。浏览器控制台采样零错误，字体回退报告一条 Noto 字形警告；字体覆盖与不同浏览器仍需继续验证。生成测验出现可同时成立的干扰选项，题目质量另列后续优化，生成与提交链路分别记录。
 - 本轮浏览器验证覆盖上述路径；Web 智能体完整对话、社区发布与讨论、不同浏览器/多账号隔离、邮件及微信链路继续按专项清单验收。Android / Windows 共享视觉变更继续由云构建发布。
 
+### 公网发布结果
+
+- 功能源码 `b8525ceac0e0b28364807289f81d26561d851315` 已推送 main。[Web 云构建](https://github.com/Khk-NL/Campulse/actions/runs/38878195440)和[工程云检查](https://github.com/Khk-NL/Campulse/actions/runs/38878195498)成功。先部署本机 Web Release 做入口检查，随后用同提交的 GitHub Web ZIP 替换；已核对 Release sourceCommit 与 SHA256。
+- 当前入口为 [Web 工作台](https://campus.allezafrique.cn/app/)，在线 `version.json` 读回版本 1.5.0 和上述提交。静态入口、JS、WebAssembly 均 HTTP 200，WebAssembly MIME 正确；首页、运营台及 health 保持可达。云包替换前恢复点 `/opt/campus/backups/web-20261016-171111`，其内保留上一份本机 Web 包；首次发布恢复点为 `/opt/campus/backups/web-20261016-170737`。
+- Campulse 站点增加 `/app/*` 的 zstd/gzip 与 `Cache-Control: no-cache`，Caddy validate 后平滑重载；实际 JS 请求返回 gzip 和 no-cache。配置恢复点 `/opt/campus/backups/Caddyfile-before-web-20261016`，其他站点块保持原样。PocketBase、AI、Caddy、atop 四项服务 active。
+- 公网 Chrome 实际登录后读回本轮笔记与测验，全文搜索返回两条含行号的证据。更换云包并重载后，会话继续有效，3 条资料以卡片方式正常显示。浏览器布局截图保存在本机忽略目录，属于本轮验收数据。
+- 临时普通账号与本人课程、笔记、卡片、成果已删除；管理员查询确认四个集合中该 owner 的记录均为零。原有账号与数据保持。
+- 本机代理测试覆盖静态文件隔离、API 请求与会话头转发、回环 origin 预检响应；开发模式热重载的持续编辑体验，以及 Safari/Firefox 的完整流程继续验证。105 个文档本地链接检查通过。
+
 ## 2026-10-16 连续复习与资料卡片视图
 
 - 目标版本 1.4.0。增加独立连续复习页，按到期顺序逐张显示答案并保存评分，成功后推进，结束页统计本轮结果。提交期间拦截重复评分和返回；失败保留答案供重试。空格显示答案，数字 1–4 评分。

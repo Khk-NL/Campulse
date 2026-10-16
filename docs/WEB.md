@@ -2,6 +2,8 @@
 
 更新：2026-10-16。Web 与 Android / Windows 共用 Flutter 页面、PocketBase 账号和 AI 网关。官网承载公开介绍，`/app/` 承载登录后的课程、笔记、复习和社区。
 
+当前访问 [Campulse Web 工作台](https://campus.allezafrique.cn/app/)，使用与手机相同的普通账号。上线版本与操作证据见[验收记录](ACCEPTANCE.md#公网发布结果)。
+
 ## 构建与访问
 
 在 `apps/mobile` 执行：
@@ -38,6 +40,8 @@ flutter run -d chrome --web-port=5030 --dart-define=POCKETBASE_URL=https://campu
 现有服务器增量发布：核对 ZIP 的来源提交和 SHA256，上传 ZIP 与 `deploy/update-web.sh`，使用 sudo 执行脚本并传入 ZIP 的绝对路径。脚本先验证静态入口，再将原 `pb_public/app` 移入 `/opt/campus/backups/web-*` 恢复点并替换。网站首页、运营台、数据库与其他站点保持原样。当前 CI 负责构建和 Release 发布；服务器静态目录通过此脚本升级。
 
 Release 与在线 `/app/version.json` 分别记录源码提交；在线状态以实际读回和浏览器验收为准。正式域名恢复继续按[域名流程](DOMAIN_FILING.md)推进。
+
+现网 Caddy 对 `/app/*` 启用 zstd/gzip 与 `Cache-Control: no-cache`，浏览器重新校验静态入口和脚本，Wasm 按正确 MIME 返回。站点模板见 `deploy/campus.Caddyfile.example`；调整共享服务器配置前保留恢复点，验证后平滑重载。其他站点与 API 反代继续沿用原配置。
 
 ## 平台差异与验收
 
