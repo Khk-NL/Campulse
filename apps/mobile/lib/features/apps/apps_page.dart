@@ -222,6 +222,19 @@ class _AppsPageState extends State<AppsPage> {
               _header(context, l10n),
               const SizedBox(height: 12),
               _surfaceSwitcher(l10n),
+              if (_surface == _AppsSurface.forge)
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: TextButton.icon(
+                    onPressed: _browseCommunityResources,
+                    icon: const Icon(Icons.hub_outlined),
+                    label: Text(
+                      Localizations.localeOf(context).languageCode == 'en'
+                          ? 'Campus communities & open source'
+                          : '校内社区与开源资源',
+                    ),
+                  ),
+                ),
             ],
           ),
         ),
@@ -232,6 +245,18 @@ class _AppsPageState extends State<AppsPage> {
         ),
       ],
     );
+  }
+
+  void _browseCommunityResources() {
+    final hadTopic = _topic != null;
+    setState(() {
+      _surface = _AppsSurface.quick;
+      _group = ServiceGroup.web;
+      _topic = null;
+      _queries[ServiceGroup.web] = '校园社区';
+      _controllers[ServiceGroup.web]!.text = '校园社区';
+    });
+    if (hadTopic) _load();
   }
 
   Widget _quickAccess(BuildContext context, AppLocalizations l10n) {

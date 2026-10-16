@@ -10,8 +10,18 @@ test('ECNU launch catalog contains unique real mini-program IDs and public AppID
 });
 test('ECNU website catalog uses school HTTPS domains and external browser launch',()=>{
   const websites=entries.filter(entry=>entry.launchTarget.type==='web');
-  assert.equal(websites.length,4);
-  for(const entry of websites){const url=new URL(entry.launchTarget.url);assert.equal(url.protocol,'https:');assert.ok(url.hostname.endsWith('.ecnu.edu.cn'));assert.equal(entry.launchTarget.preferredMode,'external');assert.equal(entry.isOfficial,true);}
+  assert.equal(websites.length,6);
+  for(const entry of websites){const url=new URL(entry.launchTarget.url);assert.equal(url.protocol,'https:');assert.ok(url.hostname.endsWith('.ecnu.edu.cn'));assert.equal(entry.launchTarget.preferredMode,'external');}
+});
+
+test('campus community references preserve external provenance and link to verified introductions',()=>{
+  const resources=entries.filter(entry=>entry.tags.includes('校园社区'));
+  assert.equal(resources.length,2);
+  assert.deepEqual(new Set(resources.map(entry=>entry.launchTarget.url)),new Set([
+    'https://comm.ecnu.edu.cn/a8/be/c41509a567486/page.htm',
+    'https://www.ecnu.edu.cn/info/1094/70562.htm',
+  ]));
+  for(const entry of resources){assert.equal(entry.origin,'external');assert.equal(entry.isOfficial,false);assert.ok(entry.name.endsWith('介绍'));}
 });
 
 test('Suishiban links to the official access guide rather than a session-specific portal',()=>{

@@ -119,6 +119,29 @@ class EmptyingCatalogueRepository extends RecordingCampusRepository {
       empty ? <CampusApp>[] : super.fetchCampusApps(query);
 }
 
+class CommunityResourcesRepository extends RecordingCampusRepository {
+  @override
+  Future<List<CampusService>> listServices(CampusServicesQuery query) async => [
+    ...await super.listServices(query),
+    CampusService.tryFromJson({
+      'id': 'community-resource',
+      'universityId': AppState.defaultUniversityId,
+      'name': '狮学园学生作品社区介绍',
+      'description': '学院公开介绍',
+      'category': 'other',
+      'origin': 'external',
+      'isOfficial': false,
+      'status': 'active',
+      'tags': ['校园社区'],
+      'launchTarget': {
+        'type': 'web',
+        'url': 'https://comm.ecnu.edu.cn/a8/be/c41509a567486/page.htm',
+        'preferredMode': 'external',
+      },
+    })!,
+  ];
+}
+
 class PendingCatalogueRepository extends RecordingCampusRepository {
   final pendingServices = Completer<List<CampusService>>();
   int attempts = 0;
@@ -210,6 +233,35 @@ void main() {
   /// Scoping to `Card` is required: the same word also appears in a topic chip (「图书馆」 is
   /// both a service name and a tag), in the search field's own text, and in subtitles.
   Finder row(String name) => find.widgetWithText(Card, name);
+
+  testWidgets(
+    'community resources use the managed directory and real web launcher',
+    (tester) async {
+      useTallViewport(tester);
+      final repository = CommunityResourcesRepository();
+      final state = await buildState(repository);
+      final launcher = RecordingLauncher();
+      await tester.pumpWidget(wrap(state, launcher: launcher));
+      await tester.pumpAndSettle();
+      final l10n = l10nOf(tester);
+      await tester.tap(find.text(l10n.appsForge));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('校内社区与开源资源'));
+      await tester.pumpAndSettle();
+      expect(row('狮学园学生作品社区介绍'), findsOneWidget);
+      expect(row('教务处'), findsNothing);
+      await tester.tap(find.text('狮学园学生作品社区介绍'));
+      await tester.pumpAndSettle();
+      final target = launcher.targets.single as WebLaunchTarget;
+      expect(
+        target.url.toString(),
+        'https://comm.ecnu.edu.cn/a8/be/c41509a567486/page.htm',
+      );
+      expect(target.preferredMode, WebLaunchMode.external);
+      await tester.pumpWidget(const SizedBox.shrink());
+      state.dispose();
+    },
+  );
 
   for (final fails in [false, true]) {
     testWidgets(

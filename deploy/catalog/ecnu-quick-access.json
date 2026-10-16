@@ -1,4 +1,6 @@
 [
+  {"name":"狮学园学生作品社区介绍","description":"传播学院2023年学生项目介绍：作品展示与互动交流，当前运营状态待核实","category":"other","origin":"external","isOfficial":false,"tags":["校园社区","学生作品","交流"],"launchTarget":{"type":"web","url":"https://comm.ecnu.edu.cn/a8/be/c41509a567486/page.htm","preferredMode":"external"}},
+  {"name":"X-lab开源社区介绍","description":"学校公开介绍的开源项目、社区协作与实践资源","category":"other","origin":"external","isOfficial":false,"tags":["校园社区","开源","项目协作"],"launchTarget":{"type":"web","url":"https://www.ecnu.edu.cn/info/1094/70562.htm","preferredMode":"external"}},
   {"name":"随师办入口与指南","description":"学校移动服务门户的官方入口说明，含微信小程序和企业微信访问方式","category":"official-hub","origin":"official","isOfficial":true,"tags":["随师办","校务","服务"],"launchTarget":{"type":"web","url":"https://eoffice.ecnu.edu.cn/sjmhwssb/list.htm","preferredMode":"external"}},
   {"name":"华东师范大学校友服务大厅","description":"校友服务与活动入口","category":"administration","origin":"official","isOfficial":true,"tags":["校友","服务"],"launchTarget":{"type":"wechat-mini-program","originalId":"gh_92ba6f495285","path":""},"miniProgramAppId":"wx56a78e0a1b4fc641"},
   {"name":"HS狮耳","description":"HS狮耳小程序入口","category":"other","origin":"external","isOfficial":false,"tags":["校园"],"launchTarget":{"type":"wechat-mini-program","originalId":"gh_7b9fb4ea3857","path":""},"miniProgramAppId":"wxbbdd3b6bbe83a4bf"},

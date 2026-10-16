@@ -1,10 +1,13 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:campus_mobile/features/apps/forge_page.dart';
 import 'package:campus_mobile/features/apps/forge_repository.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:pocketbase/pocketbase.dart';
+import 'package:http/http.dart' as http;
+import 'package:http/testing.dart';
 
 class FakeForge extends ForgeRepository {
   FakeForge() : super(PocketBase('http://example.test'));
@@ -78,8 +81,16 @@ class FakeForge extends ForgeRepository {
   Future<ResultList<RecordModel>> discussions(
     String repository, {
     int page = 1,
-  }) async =>
-      ResultList(items: threads, totalItems: threads.length, totalPages: 1);
+    String? status,
+  }) async {
+    final rows = threads
+        .where(
+          (row) => status == null || row.getStringValue('status') == status,
+        )
+        .toList();
+    return ResultList(items: rows, totalItems: rows.length, totalPages: 1);
+  }
+
   @override
   Future<RecordModel> discuss(
     String repository,
@@ -134,6 +145,97 @@ class PendingForge extends FakeForge {
 }
 
 void main() {
+  test(
+    'discussion filters preserve project scope and pagination on the wire',
+    () async {
+      final requests = <Uri>[];
+      final transport = MockClient((request) async {
+        requests.add(request.url);
+        return http.Response(
+          jsonEncode({
+            'items': [],
+            'page': 2,
+            'perPage': 20,
+            'totalItems': 0,
+            'totalPages': 0,
+          }),
+          200,
+        );
+      });
+      final repo = ForgeRepository(
+        PocketBase('https://example.test', httpClientFactory: () => transport),
+      );
+      await repo.discussions('project1', page: 2, status: 'closed');
+      expect(requests.single.queryParameters['page'], '2');
+      expect(
+        requests.single.queryParameters['filter'],
+        contains('repository = "project1"'),
+      );
+      expect(
+        requests.single.queryParameters['filter'],
+        contains('status = "closed"'),
+      );
+      await repo.discussions('project1');
+      expect(
+        requests.last.queryParameters['filter'],
+        isNot(contains('status =')),
+      );
+      transport.close();
+    },
+  );
+
+  testWidgets('project discussions filter open and resolved threads', (
+    tester,
+  ) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(440, 1000);
+    addTearDown(tester.view.reset);
+    final repo = FakeForge();
+    final project = await repo.saveProject(
+      name: '校园工具',
+      summary: '',
+      readme: '',
+      topics: '',
+      isPublic: true,
+    );
+    repo.threads.addAll([
+      RecordModel.fromJson({
+        'id': 'open1',
+        'title': '等待处理的问题',
+        'status': 'open',
+        'kind': 'bug',
+      }),
+      RecordModel.fromJson({
+        'id': 'closed1',
+        'title': '完成处理的问题',
+        'status': 'closed',
+        'kind': 'bug',
+      }),
+    ]);
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ForgeProjectPage(repo: repo, id: project.id),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('讨论与问题'));
+    await tester.pumpAndSettle();
+    expect(find.text('等待处理的问题'), findsOneWidget);
+    expect(find.text('完成处理的问题'), findsOneWidget);
+    await tester.tap(find.widgetWithText(ChoiceChip, '已解决'));
+    await tester.pumpAndSettle();
+    expect(find.text('等待处理的问题'), findsNothing);
+    expect(find.text('完成处理的问题'), findsOneWidget);
+    await tester.tap(find.widgetWithText(ChoiceChip, '讨论中'));
+    await tester.pumpAndSettle();
+    expect(find.text('等待处理的问题'), findsOneWidget);
+    expect(find.text('完成处理的问题'), findsNothing);
+    await tester.tap(find.widgetWithText(ChoiceChip, '全部讨论'));
+    await tester.pumpAndSettle();
+    expect(find.text('完成处理的问题'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('project search debounces input and clears to all projects', (
     tester,
   ) async {

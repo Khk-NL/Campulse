@@ -81,13 +81,17 @@ class ForgeRepository {
   Future<ResultList<RecordModel>> discussions(
     String repository, {
     int page = 1,
+    String? status,
   }) => client
       .collection('forge_discussions')
       .getList(
         page: page,
         perPage: 20,
         sort: '-created',
-        filter: client.filter('repository = {:id}', {'id': repository}),
+        filter: client.filter(
+          'repository = {:id}${status == null ? '' : ' && status = {:status}'}',
+          {'id': repository, 'status': status},
+        ),
       );
   Future<RecordModel> discuss(
     String repository,

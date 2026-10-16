@@ -240,6 +240,7 @@ class _ForgeProjectPageState extends State<ForgeProjectPage> {
   bool starring = false;
   bool submitting = false;
   int page = 1;
+  String? discussionStatus;
   @override
   void initState() {
     super.initState();
@@ -249,7 +250,7 @@ class _ForgeProjectPageState extends State<ForgeProjectPage> {
   void load() {
     starReady = false;
     project = widget.repo.project(widget.id);
-    discussions = widget.repo.discussions(widget.id, page: page);
+    discussions = fetchDiscussions();
     stars = widget.repo.stars(widget.id);
     widget.repo
         .myStar(widget.id)
@@ -265,6 +266,9 @@ class _ForgeProjectPageState extends State<ForgeProjectPage> {
           if (mounted) _message(context, '关注状态加载失败，请刷新重试');
         });
   }
+
+  Future<ResultList<RecordModel>> fetchDiscussions() =>
+      widget.repo.discussions(widget.id, page: page, status: discussionStatus);
 
   @override
   Widget build(BuildContext context) => Scaffold(
@@ -446,6 +450,31 @@ class _ForgeProjectPageState extends State<ForgeProjectPage> {
                         return ListView(
                           padding: const EdgeInsets.all(16),
                           children: [
+                            Wrap(
+                              spacing: 8,
+                              children: [
+                                for (final status in <String?>[
+                                  null,
+                                  'open',
+                                  'closed',
+                                ])
+                                  ChoiceChip(
+                                    showCheckmark: false,
+                                    label: Text(switch (status) {
+                                      'open' => '讨论中',
+                                      'closed' => '已解决',
+                                      _ => '全部讨论',
+                                    }),
+                                    selected: discussionStatus == status,
+                                    onSelected: (_) => setState(() {
+                                      discussionStatus = status;
+                                      page = 1;
+                                      discussions = fetchDiscussions();
+                                    }),
+                                  ),
+                              ],
+                            ),
+                            const SizedBox(height: 12),
                             FilledButton.icon(
                               onPressed: widget.repo.canWrite
                                   ? () async {
@@ -505,10 +534,7 @@ class _ForgeProjectPageState extends State<ForgeProjectPage> {
                               total: threads.data!.totalPages,
                               onPage: (value) => setState(() {
                                 page = value;
-                                discussions = widget.repo.discussions(
-                                  widget.id,
-                                  page: page,
-                                );
+                                discussions = fetchDiscussions();
                               }),
                             ),
                           ],
