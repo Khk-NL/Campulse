@@ -21,6 +21,8 @@ MuMu Android 15 已启动并安装该云构建包，实际点击进入首页、�
 
 上述设备证据对应 `ce0535c` 云包；本节后续修复源码推送后由 CI 重新发布，安装时重新核对 Release 元数据。
 
+修复源码已推送 main：`7911196709279a7dff5fe5f2a4e29204eceed1e3`。[TypeScript 云检查](https://github.com/Khk-NL/Campulse/actions/runs/38852131603)通过；[Android 云构建](https://github.com/Khk-NL/Campulse/actions/runs/38852131577)与[Windows 云构建](https://github.com/Khk-NL/Campulse/actions/runs/38852131592)已启动，记录时仍在运行。安装前检查两端 Release 元数据中的 sourceCommit，完成后再补设备结果。文档本地链接检查 91 项通过。
+
 ## 2026-10-16 整体工作区、Windows 与校园广场
 
 本轮覆盖首页工作台、课程搜索/置顶、收藏视图、个人内容入口和课程宽屏三栏。Windows 增加原生工程、品牌图标与 GitHub Actions Release。校园广场新增四类召集、报名/退出、讨论、兴趣名片主动公开与管理视图。
