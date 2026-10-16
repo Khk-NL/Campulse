@@ -158,6 +158,7 @@ class _CourseNotebookViewState extends State<CourseNotebookView> {
     final Size viewport = MediaQuery.sizeOf(context);
     final bool compact =
         viewport.height < 500 || viewport.width > viewport.height;
+    final bool desktop = viewport.width >= 1180;
     return Column(
       children: <Widget>[
         Container(
@@ -198,52 +199,83 @@ class _CourseNotebookViewState extends State<CourseNotebookView> {
                       ?.copyWith(color: colors.onSurfaceVariant),
                 ),
               SizedBox(height: compact ? 4 : 14),
-              SizedBox(
-                width: double.infinity,
-                child: SegmentedButton<int>(
-                  showSelectedIcon: false,
-                  segments: const <ButtonSegment<int>>[
-                    ButtonSegment<int>(
-                      value: 0,
-                      label: Text('资料'),
-                      icon: Icon(Icons.library_books_outlined),
+              if (desktop)
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    ChoiceChip(
+                      label: const Text('学习空间'),
+                      selected: _tab != 2,
+                      showCheckmark: false,
+                      onSelected: (_) => setState(() => _tab = 1),
                     ),
-                    ButtonSegment<int>(
-                      value: 1,
-                      label: Text('提问'),
-                      icon: Icon(Icons.forum_outlined),
-                    ),
-                    ButtonSegment<int>(
-                      value: 2,
-                      label: Text('计划'),
-                      icon: Icon(Icons.checklist_outlined),
-                    ),
-                    ButtonSegment<int>(
-                      value: 3,
-                      label: Text('工作台'),
-                      icon: Icon(Icons.dashboard_customize_outlined),
+                    ChoiceChip(
+                      label: const Text('课程计划'),
+                      selected: _tab == 2,
+                      showCheckmark: false,
+                      onSelected: (_) => setState(() => _tab = 2),
                     ),
                   ],
-                  selected: <int>{_tab},
-                  onSelectionChanged: (Set<int> value) =>
-                      setState(() => _tab = value.first),
+                )
+              else
+                SizedBox(
+                  width: double.infinity,
+                  child: SegmentedButton<int>(
+                    showSelectedIcon: false,
+                    segments: const <ButtonSegment<int>>[
+                      ButtonSegment<int>(
+                        value: 0,
+                        label: Text('资料'),
+                        icon: Icon(Icons.library_books_outlined),
+                      ),
+                      ButtonSegment<int>(
+                        value: 1,
+                        label: Text('提问'),
+                        icon: Icon(Icons.forum_outlined),
+                      ),
+                      ButtonSegment<int>(
+                        value: 2,
+                        label: Text('计划'),
+                        icon: Icon(Icons.checklist_outlined),
+                      ),
+                      ButtonSegment<int>(
+                        value: 3,
+                        label: Text('工作台'),
+                        icon: Icon(Icons.dashboard_customize_outlined),
+                      ),
+                    ],
+                    selected: <int>{_tab},
+                    onSelectionChanged: (Set<int> value) =>
+                        setState(() => _tab = value.first),
+                  ),
                 ),
-              ),
             ],
           ),
         ),
         Expanded(
-          child: switch (_tab) {
-            0 => _sourcePanel(context),
-            1 => _questionPanel(context),
-            2 => TaskPlanner(
-              activities: _activities,
-              onSave: widget.onSaveActivity,
-              onOpen: widget.onOpenActivity,
-              course: widget.course,
-            ),
-            _ => _studioPanel(context),
-          },
+          child: desktop && _tab != 2
+              ? Row(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    SizedBox(width: 310, child: _sourcePanel(context)),
+                    const VerticalDivider(width: 1),
+                    Expanded(child: _questionPanel(context)),
+                    const VerticalDivider(width: 1),
+                    SizedBox(width: 320, child: _studioPanel(context)),
+                  ],
+                )
+              : switch (_tab) {
+                  0 => _sourcePanel(context),
+                  1 => _questionPanel(context),
+                  2 => TaskPlanner(
+                    activities: _activities,
+                    onSave: widget.onSaveActivity,
+                    onOpen: widget.onOpenActivity,
+                    course: widget.course,
+                  ),
+                  _ => _studioPanel(context),
+                },
         ),
       ],
     );

@@ -21,20 +21,28 @@ import 'package:campus_mobile/data/repositories/campus_repository.dart';
 import 'package:campus_mobile/data/repositories/data_source_mode.dart';
 import 'package:campus_mobile/features/apps/campus_entry.dart';
 import 'package:campus_mobile/features/apps/forge_page.dart';
+import 'package:campus_mobile/features/community/community_page.dart';
 import 'package:campus_mobile/features/apps/service_grouping.dart';
 import 'package:campus_mobile/features/shared/widgets/offline_banner.dart';
 import 'package:campus_mobile/features/shared/widgets/service_details_sheet.dart';
 import 'package:campus_mobile/features/shared/widgets/state_views.dart';
 import 'package:campus_mobile/features/shared/widgets/university_brand_mark.dart';
+import 'package:campus_mobile/features/shared/widgets/workspace_layout.dart';
 import 'package:campus_mobile/features/store/widgets/app_details_sheet.dart';
 import 'package:campus_mobile/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 
-enum _AppsSurface { quick, forge }
+enum _AppsSurface { quick, forge, square }
 
 /// 「应用」Tab / the Apps tab.
 class AppsPage extends StatefulWidget {
-  const AppsPage({super.key});
+  const AppsPage({
+    super.key,
+    this.refreshToken = 0,
+    this.initialFavorites = false,
+  });
+  final int refreshToken;
+  final bool initialFavorites;
 
   @override
   State<AppsPage> createState() => _AppsPageState();
@@ -105,10 +113,17 @@ class _AppsPageState extends State<AppsPage> {
   /// and trap the user inside the one they picked.
   List<String> _topics = const <String>[];
   bool _filtersExpanded = false;
+  late bool _favoritesOnly = widget.initialFavorites;
   List<CampusEntry> _unfilteredEntries = const <CampusEntry>[];
 
   /// 首次加载已经排过队了吗。/ whether the first load has already been queued.
   bool _loadQueued = false;
+
+  @override
+  void didUpdateWidget(AppsPage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.refreshToken != oldWidget.refreshToken) _load();
+  }
 
   @override
   void dispose() {
@@ -219,8 +234,6 @@ class _AppsPageState extends State<AppsPage> {
           padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
           child: Column(
             children: [
-              _header(context, l10n),
-              const SizedBox(height: 12),
               _surfaceSwitcher(l10n),
               if (_surface == _AppsSurface.forge)
                 Align(
@@ -240,7 +253,9 @@ class _AppsPageState extends State<AppsPage> {
         ),
         Expanded(
           child: _surface == _AppsSurface.forge
-              ? const ForgePage(embedded: true)
+              ? ForgePage(embedded: true, refreshToken: widget.refreshToken)
+              : _surface == _AppsSurface.square
+              ? CommunityPage(refreshToken: widget.refreshToken)
               : _quickAccess(context, l10n),
         ),
       ],
@@ -289,19 +304,34 @@ class _AppsPageState extends State<AppsPage> {
           grouped[ServiceGrouping.groupOfEntry(entry)]!.add(entry);
         }
 
+        final List<CampusEntry> source = _favoritesOnly
+            ? catalogue.entries
+                  .where(
+                    (entry) => favorites.contains(
+                      ServiceGrouping.favoriteBoardOf(
+                        ServiceGrouping.groupOfEntry(entry),
+                      ),
+                      entry.key,
+                    ),
+                  )
+                  .toList()
+            : grouped[_group]!;
         final List<CampusEntry> searched = CampusEntries.search(
-          grouped[_group]!,
+          source,
           _queries[_group]!,
         );
         final List<CampusEntry> ordered = CampusEntries.sorted(
           searched,
           _sorts[_group]!,
         );
-        final String boardId = ServiceGrouping.favoriteBoardOf(_group);
         final List<CampusEntry> visible = ServiceGrouping.favoritesFirstEntries(
           ordered,
-          isFavorite: (CampusEntry entry) =>
-              favorites.contains(boardId, entry.key),
+          isFavorite: (CampusEntry entry) => favorites.contains(
+            ServiceGrouping.favoriteBoardOf(
+              ServiceGrouping.groupOfEntry(entry),
+            ),
+            entry.key,
+          ),
         );
 
         return RefreshIndicator(
@@ -309,9 +339,48 @@ class _AppsPageState extends State<AppsPage> {
           child: ListView(
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
             children: <Widget>[
+              WorkspaceBanner(
+                eyebrow: 'CAMPUS CONNECTIONS',
+                title: Localizations.localeOf(context).languageCode == 'en'
+                    ? 'Find your next stop'
+                    : '找到校园里的下一站',
+                subtitle: Localizations.localeOf(context).languageCode == 'en'
+                    ? 'Official services, useful tools and student communities.'
+                    : '学校工作台、办事入口与学生工具，在这里连接。',
+                icon: Icons.explore_outlined,
+                actions: [_header(context, l10n)],
+              ),
+              const SizedBox(height: 12),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  ChoiceChip(
+                    showCheckmark: false,
+                    selected: !_favoritesOnly,
+                    label: Text(
+                      Localizations.localeOf(context).languageCode == 'en'
+                          ? 'Service directory'
+                          : '服务目录',
+                    ),
+                    onSelected: (_) => setState(() => _favoritesOnly = false),
+                  ),
+                  ChoiceChip(
+                    showCheckmark: false,
+                    selected: _favoritesOnly,
+                    avatar: const Icon(Icons.star_outline, size: 18),
+                    label: Text(
+                      Localizations.localeOf(context).languageCode == 'en'
+                          ? 'My favorites'
+                          : '我的收藏',
+                    ),
+                    onSelected: (_) => setState(() => _favoritesOnly = true),
+                  ),
+                ],
+              ),
               if (_topics.isNotEmpty) _topicFilter(context, l10n),
               const SizedBox(height: 12),
-              _subListSwitcher(context, l10n, grouped),
+              if (!_favoritesOnly) _subListSwitcher(context, l10n, grouped),
               const SizedBox(height: 8),
               _searchAndSort(
                 context,
@@ -340,10 +409,20 @@ class _AppsPageState extends State<AppsPage> {
                       entry: entry,
                       name: _nameOf(catalogue, entry),
                       description: _descriptionOf(catalogue, entry),
-                      isFavorite: favorites.contains(boardId, entry.key),
+                      isFavorite: favorites.contains(
+                        ServiceGrouping.favoriteBoardOf(
+                          ServiceGrouping.groupOfEntry(entry),
+                        ),
+                        entry.key,
+                      ),
                       onToggleFavorite: () async {
                         try {
-                          await favorites.toggle(boardId, entry.key);
+                          await favorites.toggle(
+                            ServiceGrouping.favoriteBoardOf(
+                              ServiceGrouping.groupOfEntry(entry),
+                            ),
+                            entry.key,
+                          );
                         } catch (_) {
                           if (context.mounted) {
                             ScaffoldMessenger.of(context).showSnackBar(
@@ -376,6 +455,15 @@ class _AppsPageState extends State<AppsPage> {
             value: _AppsSurface.forge,
             label: Text(l10n.appsForge),
             icon: const Icon(Icons.code_outlined),
+          ),
+          ButtonSegment<_AppsSurface>(
+            value: _AppsSurface.square,
+            label: Text(
+              Localizations.localeOf(context).languageCode == 'en'
+                  ? 'Together'
+                  : '校园广场',
+            ),
+            icon: const Icon(Icons.groups_outlined),
           ),
         ],
         selected: <_AppsSurface>{_surface},

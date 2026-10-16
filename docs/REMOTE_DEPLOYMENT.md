@@ -4,6 +4,10 @@
 
 ## 现有环境
 
+校园广场增量升级使用固定 main 提交：先核对生产已有迁移至 `1790210012_user_relationships.js`，再运行 `deploy/update-community.sh <完整提交> 1790210013_campus_square.js`。脚本停 PocketBase 后备份 pb_data 与迁移目录，执行 up 后恢复服务；其他网站和网关保持。随后升级运营台静态文件，执行 `node scripts/community-acceptance.mjs --apply` 进行独立临时账号验收并清理测试记录。凭据通过 Git 忽略的 env 提供，测试数据与正式用户分别处理。
+
+Android 与 Windows 云构建共用公开后端配置，Windows 安装与跨端验证见[桌面与同步](DESKTOP.md)。迁移、静态管理界面、客户端 Release 按此顺序部署，实际状态记入验收文档。
+
 阿里云共享服务器 47.100.32.82，Linux + 1Panel，实际由 Caddy 管理 80/443。PocketBase 与 AI 网关分别监听 127.0.0.1:8090、127.0.0.1:8787，systemd 单元为 campus-pocketbase、campus-ai。
 
 | 路径 | 用途 |

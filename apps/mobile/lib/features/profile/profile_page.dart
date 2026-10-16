@@ -17,6 +17,13 @@ import 'package:campus_mobile/l10n/app_localizations.dart';
 
 import 'theme_color_settings.dart';
 
+import 'package:campus_mobile/features/shared/widgets/workspace_layout.dart';
+import 'package:campus_mobile/features/study/course_hub_page.dart';
+import 'package:campus_mobile/features/study/course_space_entry.dart';
+import 'package:campus_mobile/features/apps/apps_page.dart';
+import 'package:campus_mobile/features/apps/forge_page.dart';
+import 'package:campus_mobile/features/community/community_page.dart';
+
 import 'package:flutter/material.dart';
 
 /// 我的 / the profile screen.
@@ -144,6 +151,8 @@ class _ProfilePageState extends State<ProfilePage> {
         children: <Widget>[
           _identityCard(context, l10n, state),
           const SizedBox(height: 16),
+          _workspace(context),
+          const SizedBox(height: 20),
           // 「设置」把语言 / 外观 / 数据源三块收在一张卡片下，标题层级更清楚，
           // 也符合"我的"页面应有的信息架构。
           // "Settings" gathers language, appearance and data source under one card, which
@@ -153,6 +162,94 @@ class _ProfilePageState extends State<ProfilePage> {
           _aboutCard(context, l10n, state),
         ],
       ),
+    );
+  }
+
+  Widget _workspace(BuildContext context) {
+    final english = Localizations.localeOf(context).languageCode == 'en';
+    final scheme = Theme.of(context).colorScheme;
+    void open(String title, Widget page, {bool scaffold = true}) {
+      Navigator.of(context).push<void>(
+        MaterialPageRoute<void>(
+          builder: (_) => scaffold
+              ? Scaffold(
+                  appBar: AppBar(title: Text(title)),
+                  body: page,
+                )
+              : page,
+        ),
+      );
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          english ? 'My workspace' : '我的工作区',
+          style: Theme.of(context).textTheme.titleLarge,
+        ),
+        const SizedBox(height: 6),
+        Text(
+          english ? 'Pick up your work from one place.' : '常用内容与个人创作，集中整理。',
+          style: Theme.of(context).textTheme.bodyMedium
+              ?.copyWith(color: scheme.onSurfaceVariant),
+        ),
+        const SizedBox(height: 14),
+        WorkspaceGrid(
+          children: [
+            WorkspaceAction(
+              title: english ? 'Campus square' : '我的校园圈',
+              subtitle: english
+                  ? 'Teams, meetups & interests'
+                  : '竞赛组队 · 运动约局 · 兴趣名片',
+              icon: Icons.groups_outlined,
+              color: scheme.tertiary,
+              onTap: () => open(
+                english ? 'Campus square' : '校园广场',
+                const CommunityPage(),
+              ),
+            ),
+            WorkspaceAction(
+              title: english ? 'My learning' : '我的学习',
+              subtitle: english ? 'Courses, sources & cards' : '课程 · 资料 · 复习卡片',
+              icon: Icons.auto_stories_outlined,
+              onTap: () =>
+                  open(english ? 'Learning' : '学习', const CourseHubPage()),
+            ),
+            WorkspaceAction(
+              title: english ? 'My plans' : '计划与归档',
+              subtitle: english ? 'Tasks & completed work' : '安排待办，查看已完成',
+              icon: Icons.checklist_rounded,
+              color: scheme.secondary,
+              onTap: () => open(
+                '',
+                const CourseSpaceEntry(plansOnly: true),
+                scaffold: false,
+              ),
+            ),
+            WorkspaceAction(
+              title: english ? 'My repositories' : '个人仓库',
+              subtitle: english
+                  ? 'Projects, reviews & discussions'
+                  : '自己的项目 · 审核 · 讨论',
+              icon: Icons.source_outlined,
+              color: scheme.tertiary,
+              onTap: () =>
+                  open('', const ForgePage(initialMine: true), scaffold: false),
+            ),
+            WorkspaceAction(
+              title: english ? 'Saved services' : '收藏的入口',
+              subtitle: english ? 'Services you use often' : '把常用校园服务放在手边',
+              icon: Icons.bookmarks_outlined,
+              color: scheme.primary,
+              onTap: () => open(
+                english ? 'Favorites' : '收藏',
+                const AppsPage(initialFavorites: true),
+              ),
+            ),
+          ],
+        ),
+      ],
     );
   }
 
@@ -175,6 +272,7 @@ class _ProfilePageState extends State<ProfilePage> {
               .join(', ');
 
     return Card(
+      color: theme.colorScheme.primaryContainer.withValues(alpha: .3),
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(

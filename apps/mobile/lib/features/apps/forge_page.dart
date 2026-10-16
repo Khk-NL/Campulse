@@ -5,12 +5,21 @@ import 'package:pocketbase/pocketbase.dart';
 import 'package:campus_mobile/core/pocketbase_session.dart';
 
 import 'forge_repository.dart';
+import '../shared/widgets/workspace_layout.dart';
 import '../../core/launcher/external_opener.dart';
 
 class ForgePage extends StatefulWidget {
-  const ForgePage({super.key, this.repository, this.embedded = false});
+  const ForgePage({
+    super.key,
+    this.repository,
+    this.embedded = false,
+    this.initialMine = false,
+    this.refreshToken = 0,
+  });
   final ForgeRepository? repository;
   final bool embedded;
+  final bool initialMine;
+  final int refreshToken;
   @override
   State<ForgePage> createState() => _ForgePageState();
 }
@@ -22,7 +31,7 @@ class _ForgePageState extends State<ForgePage> {
     return session == null ? null : ForgeRepository(session.client);
   }
 
-  bool mine = false;
+  late bool mine = widget.initialMine;
   String query = '';
   int page = 1;
   Future<ResultList<RecordModel>>? result;
@@ -36,6 +45,12 @@ class _ForgePageState extends State<ForgePage> {
 
   void load() {
     result = repo?.projects(page: page, query: query, mine: mine);
+  }
+
+  @override
+  void didUpdateWidget(ForgePage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.refreshToken != oldWidget.refreshToken) setState(load);
   }
 
   void search(String value) {
@@ -68,13 +83,6 @@ class _ForgePageState extends State<ForgePage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      '一起构建校园',
-                      style: Theme.of(context).textTheme.headlineSmall,
-                    ),
-                    const SizedBox(height: 6),
-                    const Text('发现项目 · 提出问题 · 分享进展 · 参与讨论'),
-                    const SizedBox(height: 16),
                     Row(
                       children: [
                         Expanded(
@@ -170,6 +178,22 @@ class _ForgePageState extends State<ForgePage> {
                       child: ListView(
                         padding: const EdgeInsets.symmetric(horizontal: 16),
                         children: [
+                          WorkspaceBanner(
+                            eyebrow: 'CAMPULSE COMMUNITY',
+                            title: mine ? '从想法到作品' : '一起构建校园',
+                            subtitle: mine
+                                ? '管理自己的项目，提交审核，记录迭代。'
+                                : '发现项目 · 提出问题 · 分享进展 · 参与讨论',
+                            icon: mine
+                                ? Icons.inventory_2_outlined
+                                : Icons.forum_outlined,
+                          ),
+                          const SizedBox(height: 16),
+                          Text(
+                            '${rows.totalItems} 个项目',
+                            style: Theme.of(context).textTheme.labelLarge,
+                          ),
+                          const SizedBox(height: 8),
                           if (rows.items.isEmpty)
                             const Padding(
                               padding: EdgeInsets.all(32),
@@ -179,7 +203,15 @@ class _ForgePageState extends State<ForgePage> {
                             Card(
                               child: ListTile(
                                 contentPadding: const EdgeInsets.all(16),
-                                leading: const Icon(Icons.source_outlined),
+                                leading: CircleAvatar(
+                                  backgroundColor: Theme.of(context)
+                                      .colorScheme
+                                      .tertiaryContainer,
+                                  foregroundColor: Theme.of(context)
+                                      .colorScheme
+                                      .onTertiaryContainer,
+                                  child: const Icon(Icons.source_outlined),
+                                ),
                                 title: Text(item.getStringValue('name')),
                                 subtitle: Text(
                                   '${item.getStringValue('summary')}\n${item.getStringValue('topics')} · ${_reviewLabel(item)}',

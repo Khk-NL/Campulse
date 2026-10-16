@@ -7,7 +7,7 @@ root=/opt/campus/pocketbase
 test -f "$root/pb_data/data.db"
 test -x "$root/pocketbase"
 file="${2:-1790210010_forge_community.js}"
-[[ "$file" =~ ^179021001[01]_forge_[a-z_]+\.js$ || "$file" == '1790210012_user_relationships.js' ]] || { echo 'Expected a supported migration'; exit 1; }
+[[ "$file" =~ ^179021001[01]_forge_[a-z_]+\.js$ || "$file" == '1790210012_user_relationships.js' || "$file" == '1790210013_campus_square.js' ]] || { echo 'Expected a supported migration'; exit 1; }
 staging=$(mktemp -d /tmp/campulse-community.XXXXXX)
 node=/opt/campus/runtime/node-v22.23.3-linux-x64/bin/node
 curl --fail --silent --show-error --retry 2 --connect-timeout 15 --max-time 60 \

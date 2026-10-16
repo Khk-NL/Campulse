@@ -5,6 +5,7 @@
 | 读者与用途 | 入口 |
 | --- | --- |
 | 试用与功能操作 | [使用指南](USAGE.md) |
+| 电脑安装与跨端操作 | [桌面与同步](DESKTOP.md) |
 | 继续开发 | [开发指南](DEVELOPMENT.md)、[交接清单](HANDOFF.md) |
 | 理解模块与数据 | [架构](ARCHITECTURE.md)、[数据模型](DATA_MODEL.md) |
 | 课程与 AI 学习 | [课程知识工作台](COURSE_NOTEBOOK.md) |

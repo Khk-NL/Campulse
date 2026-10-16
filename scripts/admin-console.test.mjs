@@ -35,6 +35,15 @@ test('workspace separates received and authored project interactions', () => {
   assert.equal(workspaceFilter('discussions', recordId), `owner = "${recordId}" && repository.owner != "${recordId}"`);
   assert.ok(workspaceFilter('notes', recordId, 'a"b').includes('courseId = "a\\"b"'));
 });
+
+test('square administration preserves personal ownership and provides a global moderation view', () => {
+  for (const view of ['squarePosts', 'squareInterests', 'squareReplies', 'squareProfiles']) {
+    assert.equal(workspaceFilter(view, recordId), ownerFilter(recordId));
+    assert.throws(() => workspaceFilter(view));
+  }
+  assert.equal(workspaceFilter('squareFeed'), '');
+  assert.equal(sections.community_interests.action, '新增活动报名');
+});
 test('domain listing preserves relationship scopes', async () => {
   let requested;
   const client = new AdminClient('', async url => { requested = url; return new Response('{"items":[]}'); });

@@ -31,3 +31,4 @@ try {
     Write-Output "$brandPath ${brandSize}x${brandSize}"
   }
 } finally { $brandSource.Dispose() }
+& (Join-Path $PSScriptRoot 'export-windows-icon.ps1')

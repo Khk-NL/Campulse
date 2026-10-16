@@ -4,6 +4,8 @@ export const collections = Object.freeze({
   course_artifacts: '学习成果', campus_content: '校园 GitHub 与服务',
   forge_repositories: '社区项目仓库', forge_discussions: '项目讨论与问题',
   forge_replies: '讨论回复', forge_stars: '项目关注', user_favorites: '用户收藏',
+  community_posts: '校园召集', community_interests: '活动报名',
+  community_replies: '活动讨论', community_profiles: '兴趣名片',
 });
 
 export const sections = Object.freeze({
@@ -19,6 +21,10 @@ export const sections = Object.freeze({
   forge_replies: { action: '新增讨论回复', description: '查看和维护社区成员的交流内容', tone: 'gold' },
   forge_stars: { action: '新增项目关注', description: '管理成员与项目的关注关系', tone: 'red' },
   user_favorites: { action: '新增收藏', description: '维护用户收藏的入口与板块归属', tone: 'gold' },
+  community_posts: { action: '新增校园召集', description: '管理竞赛组队、运动约局、学习搭子与校园扩列', tone: 'purple' },
+  community_interests: { action: '新增活动报名', description: '按用户或发起人查看参加意向和报名留言', tone: 'gold' },
+  community_replies: { action: '新增活动讨论', description: '维护召集下的问答与交流', tone: 'blue' },
+  community_profiles: { action: '新增兴趣名片', description: '管理个人介绍、兴趣技能与公开状态', tone: 'red' },
 });
 
 // Domain views share existing collections; their filters define each relationship.
@@ -45,6 +51,11 @@ export const workspaceViews = Object.freeze({
   reviews: { collection: 'forge_repositories', label: '项目上架审核', review: true },
   miniPrograms: { collection: 'campus_content', label: '官方小程序', target: 'wechat-mini-program' },
   websites: { collection: 'campus_content', label: '官方网站', target: 'web' },
+  squarePosts: { collection: 'community_posts', label: '校园召集', personal: true },
+  squareFeed: { collection: 'community_posts', label: '校园广场内容' },
+  squareInterests: { collection: 'community_interests', label: '活动报名', personal: true },
+  squareReplies: { collection: 'community_replies', label: '活动讨论', personal: true },
+  squareProfiles: { collection: 'community_profiles', label: '兴趣名片', personal: true },
 });
 
 export function workspaceFilter(viewId, owner = '', courseId = '') {

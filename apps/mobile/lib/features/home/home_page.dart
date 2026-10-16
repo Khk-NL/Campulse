@@ -31,13 +31,26 @@ import 'package:campus_mobile/features/inbox/widgets/transaction_details_sheet.d
 import 'package:campus_mobile/features/shared/widgets/offline_banner.dart';
 import 'package:campus_mobile/features/shared/widgets/section_card.dart';
 import 'package:campus_mobile/features/shared/widgets/transaction_tile.dart';
+import 'package:campus_mobile/features/shared/widgets/workspace_layout.dart';
+import 'package:campus_mobile/features/study/course_space_entry.dart';
+import 'package:campus_mobile/features/study/course_hub_page.dart';
+import 'package:campus_mobile/features/apps/apps_page.dart';
+import 'package:campus_mobile/features/profile/profile_page.dart';
+import 'package:intl/intl.dart';
 import 'package:campus_mobile/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 
 /// 首页 / the home screen.
 class HomePage extends StatefulWidget {
-  const HomePage({super.key, this.active = true});
+  const HomePage({
+    super.key,
+    this.active = true,
+    this.refreshToken = 0,
+    this.onNavigate,
+  });
   final bool active;
+  final int refreshToken;
+  final ValueChanged<int>? onNavigate;
 
   @override
   State<HomePage> createState() => _HomePageState();
@@ -71,7 +84,10 @@ class _HomePageState extends State<HomePage> {
   @override
   void didUpdateWidget(covariant HomePage oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (widget.active && !oldWidget.active) _load();
+    if ((widget.active && !oldWidget.active) ||
+        widget.refreshToken != oldWidget.refreshToken) {
+      _load();
+    }
   }
 
   @override
@@ -143,19 +159,112 @@ class _HomePageState extends State<HomePage> {
       child: ListView(
         padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
         children: <Widget>[
-          PersonalPlanCard(
-            key: ValueKey(AppScope.of(context).user?.id ?? 'guest'),
-            refreshToken: _planRefresh,
+          _welcome(),
+          const SizedBox(height: 16),
+          WorkspaceGrid(
+            minWidth: 410,
+            children: [
+              PersonalPlanCard(
+                key: ValueKey(AppScope.of(context).user?.id ?? 'guest'),
+                refreshToken: _planRefresh,
+              ),
+              _todaySection(),
+            ],
           ),
           const SizedBox(height: 16),
-          _todaySection(),
+          _destinations(),
           const SizedBox(height: 16),
-          _tasksSection(),
-          const SizedBox(height: 16),
-          _campusSection(),
+          WorkspaceGrid(
+            minWidth: 410,
+            children: [_tasksSection(), _campusSection()],
+          ),
           const SizedBox(height: 16),
           _quickAccessSection(),
         ],
+      ),
+    );
+  }
+
+  Widget _welcome() {
+    final state = AppScope.of(context);
+    final english = Localizations.localeOf(context).languageCode == 'en';
+    final name = state.displayName;
+    return WorkspaceBanner(
+      eyebrow: DateFormat(
+        'MMM d · EEEE',
+        english ? 'en' : 'zh',
+      ).format(DateTime.now()),
+      title: name.isEmpty
+          ? (english ? 'Your campus, in focus' : '把今天安排得更从容')
+          : (english ? 'Welcome back, $name' : '$name，开启校园新一天'),
+      subtitle: english
+          ? 'Pick up your learning, plan your day, build together.'
+          : '从今日安排出发，继续学习，也参与校园里的新想法。',
+      icon: Icons.wb_sunny_outlined,
+      actions: [
+        FilledButton.icon(
+          onPressed: () async {
+            await Navigator.of(context).push<void>(
+              MaterialPageRoute<void>(
+                builder: (_) => const CourseSpaceEntry(plansOnly: true),
+              ),
+            );
+            if (mounted) _load();
+          },
+          icon: const Icon(Icons.edit_calendar_outlined),
+          label: Text(english ? 'Plan my day' : '安排今天'),
+        ),
+      ],
+    );
+  }
+
+  Widget _destinations() {
+    final english = Localizations.localeOf(context).languageCode == 'en';
+    final scheme = Theme.of(context).colorScheme;
+    return WorkspaceGrid(
+      children: [
+        WorkspaceAction(
+          title: english ? 'Learning library' : '课程资料库',
+          subtitle: english ? 'Sources, notes & review' : '课表 · 教材 · 笔记 · 复习',
+          icon: Icons.auto_stories_outlined,
+          onTap: () => _navigate(2),
+        ),
+        WorkspaceAction(
+          title: english ? 'Campus connections' : '校园连接',
+          subtitle: english
+              ? 'Services & student projects'
+              : '官方服务 · 学生作品 · 项目交流',
+          icon: Icons.hub_outlined,
+          color: scheme.tertiary,
+          onTap: () => _navigate(1),
+        ),
+        WorkspaceAction(
+          title: english ? 'Personal workspace' : '个人工作区',
+          subtitle: english ? 'Your identity & preferences' : '账号 · 收藏 · 个性化',
+          icon: Icons.tune_rounded,
+          color: scheme.secondary,
+          onTap: () => _navigate(3),
+        ),
+      ],
+    );
+  }
+
+  void _navigate(int index) {
+    if (widget.onNavigate != null) {
+      widget.onNavigate!(index);
+      return;
+    }
+    final page = switch (index) {
+      1 => const AppsPage(),
+      2 => const CourseHubPage(),
+      _ => const ProfilePage(),
+    };
+    Navigator.of(context).push<void>(
+      MaterialPageRoute<void>(
+        builder: (_) => Scaffold(
+          appBar: AppBar(title: const Text('Campulse')),
+          body: page,
+        ),
       ),
     );
   }

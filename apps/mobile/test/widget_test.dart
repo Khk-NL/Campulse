@@ -25,11 +25,14 @@ import 'package:campus_mobile/core/config/app_config.dart';
 import 'package:campus_mobile/core/config/preference_store.dart';
 import 'package:campus_mobile/core/locale_resolution.dart';
 import 'package:campus_mobile/core/theme/campus_theme.dart';
+
 import 'fixtures/in_memory_campus_repository.dart';
+
 import 'package:campus_mobile/features/inbox/inbox_page.dart';
 import 'package:campus_mobile/features/search/search_page.dart';
 import 'package:campus_mobile/features/study/course_hub_page.dart';
 import 'package:campus_mobile/features/study/study_page.dart';
+import 'package:campus_mobile/features/profile/profile_page.dart';
 import 'package:campus_mobile/features/shell/app_shell.dart';
 import 'package:campus_mobile/features/timetable/timetable_page.dart';
 import 'package:campus_mobile/l10n/app_localizations.dart';
@@ -92,6 +95,8 @@ void main() {
   });
 
   testWidgets('我的默认折叠设置与关于，昵称编辑后立即显示', (tester) async {
+    await tester.binding.setSurfaceSize(const Size(800, 1400));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
     final state = await buildState();
     await tester.pumpWidget(wrap(state));
     await tester.pumpAndSettle();
@@ -191,6 +196,16 @@ void main() {
     await tester.tap(find.text(l10n.navProfile).last);
     await tester.pumpAndSettle();
     expect(find.text(l10n.profileLanguage), findsNothing);
+    await tester.scrollUntilVisible(
+      find.text(l10n.profileSettings),
+      250,
+      scrollable: find
+          .descendant(
+            of: find.byType(ProfilePage),
+            matching: find.byType(Scrollable),
+          )
+          .first,
+    );
     await tester.tap(find.text(l10n.profileSettings));
     await tester.pumpAndSettle();
     expect(find.text(l10n.profileLanguage), findsWidgets);
@@ -308,6 +323,7 @@ void main() {
       matching: find.text('现代软件工程'),
     );
     await tester.ensureVisible(courseInHub);
+    await tester.pumpAndSettle();
     await tester.tap(courseInHub);
     await tester.pumpAndSettle();
     expect(find.byType(StudyPage), findsOneWidget);
@@ -318,7 +334,16 @@ void main() {
     expect(find.text('引用范围 · 已选 0 份资料'), findsOneWidget);
     await tester.binding.handlePopRoute();
     await tester.pumpAndSettle();
-    await tester.ensureVisible(find.text('打开课程表', skipOffstage: false));
+    await tester.scrollUntilVisible(
+      find.text('打开课程表'),
+      -250,
+      scrollable: find
+          .descendant(
+            of: find.byType(CourseHubPage),
+            matching: find.byType(Scrollable),
+          )
+          .first,
+    );
     await tester.pumpAndSettle();
     await tester.tap(find.text('打开课程表'));
     await tester.pumpAndSettle();

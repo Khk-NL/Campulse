@@ -1,0 +1,60 @@
+name: Campulse Windows release
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'apps/mobile/**'
+      - '.github/workflows/windows-release.yml'
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: campulse-windows-main
+  cancel-in-progress: true
+jobs:
+  windows:
+    runs-on: windows-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.47.5'
+          channel: stable
+          cache: true
+      - name: Verify client and endpoints
+        working-directory: apps/mobile
+        run: |
+          flutter pub get --enforce-lockfile
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          flutter analyze
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          flutter test
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          node ../../scripts/check-mobile-production-config.mjs
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+      - name: Build Windows client
+        working-directory: apps/mobile
+        run: |
+          $version = ((Select-String '^version: ([^+]+)' pubspec.yaml).Matches.Groups[1].Value)
+          flutter build windows --release --build-number=${{ github.run_number }} --dart-define-from-file=config/eduwork.production.example.json --dart-define=CAMPUS_APP_VERSION=$version
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }
+      - name: Package and publish desktop preview
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          New-Item -ItemType Directory -Path desktop-release -Force | Out-Null
+          Compress-Archive -Path apps/mobile/build/windows/x64/runner/Release/* -DestinationPath desktop-release/Campulse-Windows-x64.zip
+          $hash = (Get-FileHash desktop-release/Campulse-Windows-x64.zip -Algorithm SHA256).Hash.ToLowerInvariant()
+          "$hash  Campulse-Windows-x64.zip" | Set-Content desktop-release/Campulse-Windows-x64.zip.sha256 -Encoding utf8
+          @{ sourceCommit = '${{ github.sha }}'; platform = 'windows-x64'; run = '${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}'; preview = $true } | ConvertTo-Json | Set-Content desktop-release/Campulse-Windows.json -Encoding utf8
+          gh release view campulse-desktop-preview
+          if ($LASTEXITCODE) {
+            gh release create campulse-desktop-preview --prerelease --title 'Campulse Windows 预览版' --notes '解压整个压缩包后运行 Campulse.exe。与 Android 共用 Campulse 账号和云端数据。'
+            if ($LASTEXITCODE) { exit $LASTEXITCODE }
+          }
+          gh release upload campulse-desktop-preview desktop-release/* --clobber
+          if ($LASTEXITCODE) { exit $LASTEXITCODE }

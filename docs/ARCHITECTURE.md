@@ -5,7 +5,7 @@
 ## 运行路径
 
 ```text
-Flutter Android
+Flutter Android / Windows（共享 Dart 业务层）
  ├─ PocketBase HTTPS API → 账号、课程、笔记、计划、收藏、社区
  ├─ /ai/v1/* → Node 网关 → EduWork 核心模块 + ChatECNU
  └─ CampusLauncher → 外部网页 / 微信 OpenSDK
@@ -27,6 +27,9 @@ Caddy（现有共享服务器的 80/443）
 | 公共目录与搜索 | `apps/mobile/lib/data/repositories/`、`features/apps/` | 远程目录、分类、收藏和服务启动 |
 | 课程与学习 | `apps/mobile/lib/features/study/`、`features/timetable/` | 课程表、CSV、笔记、计划和知识工作台 |
 | 项目社区 | `apps/mobile/lib/features/apps/forge_page.dart`、`forge_repository.dart` | 我的仓库、逐项目审核、发现、讨论、回复和关注 |
+| 校园广场 | `apps/mobile/lib/features/community/` | 竞赛/运动/学习/扩列召集、报名、讨论与自愿公开名片 |
+| 自适应工作区 | `features/shared/widgets/workspace_layout.dart`、`features/shell/app_shell.dart` | 桌面侧栏、紧凑底栏、响应式网格与键盘导航 |
+| Windows 运行与发布 | `apps/mobile/windows/`、`.github/workflows/windows-release.yml` | 原生窗口、品牌图标、锁定依赖构建和 ZIP Release |
 | AI 与学习产物 | `apps/ai-gateway/src/server.mjs`、`notebook.mjs` | 鉴权、原文检索、模型调用、产物校验与 FSRS |
 | 官网与运营台 | `deploy/pocketbase/pb_public/` | 产品页面、分层管理界面、元数据驱动记录维护 |
 | 数据结构与访问规则 | `experiments/pocketbase/pb_migrations/`、`deploy/pocketbase/pb_migrations/` | 基础集合与生产增量迁移 |

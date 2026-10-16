@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 
 const config = JSON.parse(
-  fs.readFileSync('apps/mobile/config/eduwork.production.example.json', 'utf8'),
+  fs.readFileSync(new URL('../apps/mobile/config/eduwork.production.example.json', import.meta.url), 'utf8'),
 );
 const pocketBase = new URL(config.POCKETBASE_URL);
 const gateway = new URL(config.CAMPUS_EDUWORK_GATEWAY_URL);

@@ -39,6 +39,7 @@ import 'package:campus_mobile/features/shared/widgets/offline_banner.dart';
 import 'package:campus_mobile/features/shell/shell_routes.dart';
 import 'package:campus_mobile/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 /// 外壳 / the shell.
 class AppShell extends StatefulWidget {
@@ -75,6 +76,30 @@ class _AppShellState extends State<AppShell>
 
   /// 首次加载已经排过队了吗。/ whether the first load has already been queued.
   bool _loadQueued = false;
+  int _refreshToken = 0;
+  bool _refreshing = false;
+
+  void _select(int index) {
+    if (_index == index) return;
+    setState(() => _index = index);
+    if (MediaQuery.disableAnimationsOf(context)) {
+      _transition.value = 1;
+    } else {
+      _transition.forward(from: 0);
+    }
+  }
+
+  Future<void> _refresh() async {
+    if (_refreshing) return;
+    setState(() => _refreshing = true);
+    try {
+      await AppScope.read(context).retryConnection();
+      await _loadBadge();
+      if (mounted) setState(() => _refreshToken++);
+    } finally {
+      if (mounted) setState(() => _refreshing = false);
+    }
+  }
 
   @override
   void didChangeDependencies() {
@@ -104,92 +129,179 @@ class _AppShellState extends State<AppShell>
   @override
   Widget build(BuildContext context) {
     final AppLocalizations l10n = AppLocalizations.of(context);
-    return Scaffold(
-      appBar: AppBar(
-        title: Row(
-          children: <Widget>[
-            Image.asset(
-              'assets/brand/campulse-logo.png',
-              width: 30,
-              height: 30,
+    final bool desktop = MediaQuery.sizeOf(context).width >= 980;
+    final labels = [
+      l10n.navHome,
+      l10n.navStore,
+      l10n.navTimetable,
+      l10n.navProfile,
+    ];
+    const icons = [
+      Icons.dashboard_outlined,
+      Icons.apps_outlined,
+      Icons.school_outlined,
+      Icons.person_outline,
+    ];
+    return CallbackShortcuts(
+      bindings: {
+        for (int i = 0; i < 4; i++)
+          SingleActivator(
+            [
+              LogicalKeyboardKey.digit1,
+              LogicalKeyboardKey.digit2,
+              LogicalKeyboardKey.digit3,
+              LogicalKeyboardKey.digit4,
+            ][i],
+            control: true,
+          ): () =>
+              _select(i),
+        const SingleActivator(LogicalKeyboardKey.keyK, control: true): () =>
+            openSearch(context),
+        const SingleActivator(LogicalKeyboardKey.keyR, control: true): _refresh,
+      },
+      child: Focus(
+        autofocus: true,
+        child: Scaffold(
+          appBar: AppBar(
+            title: Row(
+              children: <Widget>[
+                Image.asset(
+                  'assets/brand/campulse-logo.png',
+                  width: 30,
+                  height: 30,
+                ),
+                const SizedBox(width: 10),
+                Flexible(child: Text(_title(l10n))),
+              ],
             ),
-            const SizedBox(width: 10),
-            Flexible(child: Text(_title(l10n))),
-          ],
-        ),
-        actions: <Widget>[
-          _AppBarAction(
-            icon: Icons.notifications_none,
-            tooltip: l10n.navNotification,
-            showDot: _hasOpenTasks,
-            onPressed: () => openNotificationCenter(context),
-          ),
-          _AppBarAction(
-            icon: Icons.search,
-            tooltip: l10n.navSearch,
-            onPressed: () => openSearch(context),
-          ),
-          const SizedBox(width: 4),
-        ],
-      ),
-      body: Column(
-        children: <Widget>[
-          // 离线横幅只在整个后端都不可达时出现；若只是某些接口还没上线，
-          // 由各区块自己的"演示数据"标记如实说明（见 home_page.dart）。
-          // The offline banner appears only when the whole backend is unreachable; when
-          // merely some endpoints are missing, each block states it with its own demo
-          // badge instead (see home_page.dart).
-          const OfflineBanner(),
-          Expanded(
-            child: FadeTransition(
-              opacity: Tween<double>(begin: .82, end: 1).animate(_transition),
-              child: IndexedStack(
-                key: ValueKey<String>(AppScope.of(context).user?.id ?? 'guest'),
-                index: _index,
-                children: <Widget>[
-                  HomePage(active: _index == 0),
-                  const AppsPage(),
-                  const CourseHubPage(),
-                  const ProfilePage(),
-                ],
+            actions: <Widget>[
+              IconButton(
+                tooltip: '刷新云端数据',
+                onPressed: _refreshing ? null : _refresh,
+                icon: _refreshing
+                    ? const SizedBox.square(
+                        dimension: 18,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
+                      )
+                    : const Icon(Icons.cloud_sync_outlined),
               ),
-            ),
+              _AppBarAction(
+                icon: Icons.notifications_none,
+                tooltip: l10n.navNotification,
+                showDot: _hasOpenTasks,
+                onPressed: () => openNotificationCenter(context),
+              ),
+              _AppBarAction(
+                icon: Icons.search,
+                tooltip: l10n.navSearch,
+                onPressed: () => openSearch(context),
+              ),
+              const SizedBox(width: 4),
+            ],
           ),
-        ],
-      ),
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: _index,
-        onDestinationSelected: (int index) {
-          if (_index == index) return;
-          setState(() => _index = index);
-          if (MediaQuery.disableAnimationsOf(context)) {
-            _transition.value = 1;
-          } else {
-            _transition.forward(from: 0);
-          }
-        },
-        destinations: <NavigationDestination>[
-          NavigationDestination(
-            icon: const Icon(Icons.home_outlined),
-            selectedIcon: const Icon(Icons.home),
-            label: l10n.navHome,
+          body: Row(
+            children: [
+              if (desktop) ...[
+                NavigationRail(
+                  extended: MediaQuery.sizeOf(context).width >= 1250,
+                  selectedIndex: _index,
+                  onDestinationSelected: _select,
+                  leading: const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 18),
+                    child: Text(
+                      'CAMPULSE',
+                      style: TextStyle(fontWeight: FontWeight.w800),
+                    ),
+                  ),
+                  destinations: [
+                    for (int i = 0; i < labels.length; i++)
+                      NavigationRailDestination(
+                        icon: Icon(icons[i]),
+                        label: Text(labels[i]),
+                      ),
+                  ],
+                ),
+                const VerticalDivider(width: 1),
+              ],
+              Expanded(
+                child: Align(
+                  alignment: Alignment.topCenter,
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 1560),
+                    child: Column(
+                      children: <Widget>[
+                        // 离线横幅只在整个后端都不可达时出现；若只是某些接口还没上线，
+                        // 由各区块自己的"演示数据"标记如实说明（见 home_page.dart）。
+                        // The offline banner appears only when the whole backend is unreachable; when
+                        // merely some endpoints are missing, each block states it with its own demo
+                        // badge instead (see home_page.dart).
+                        const OfflineBanner(),
+                        Expanded(
+                          child: FadeTransition(
+                            opacity: Tween<double>(
+                              begin: .82,
+                              end: 1,
+                            ).animate(_transition),
+                            child: IndexedStack(
+                              key: ValueKey<String>(
+                                AppScope.of(context).user?.id ?? 'guest',
+                              ),
+                              index: _index,
+                              children: <Widget>[
+                                HomePage(
+                                  active: _index == 0,
+                                  refreshToken: _refreshToken,
+                                  onNavigate: _select,
+                                ),
+                                AppsPage(refreshToken: _refreshToken),
+                                CourseHubPage(
+                                  active: _index == 2,
+                                  refreshToken: _refreshToken,
+                                ),
+                                const ProfilePage(),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ),
-          NavigationDestination(
-            icon: const Icon(Icons.apps_outlined),
-            selectedIcon: const Icon(Icons.apps),
-            label: l10n.navStore,
-          ),
-          NavigationDestination(
-            icon: const Icon(Icons.school_outlined),
-            selectedIcon: const Icon(Icons.school),
-            label: l10n.navTimetable,
-          ),
-          NavigationDestination(
-            icon: const Icon(Icons.person_outline),
-            selectedIcon: const Icon(Icons.person),
-            label: l10n.navProfile,
-          ),
-        ],
+          bottomNavigationBar: desktop
+              ? null
+              : NavigationBar(
+                  selectedIndex: _index,
+                  onDestinationSelected: _select,
+                  destinations: <NavigationDestination>[
+                    NavigationDestination(
+                      icon: const Icon(Icons.home_outlined),
+                      selectedIcon: const Icon(Icons.home),
+                      label: l10n.navHome,
+                    ),
+                    NavigationDestination(
+                      icon: const Icon(Icons.apps_outlined),
+                      selectedIcon: const Icon(Icons.apps),
+                      label: l10n.navStore,
+                    ),
+                    NavigationDestination(
+                      icon: const Icon(Icons.school_outlined),
+                      selectedIcon: const Icon(Icons.school),
+                      label: l10n.navTimetable,
+                    ),
+                    NavigationDestination(
+                      icon: const Icon(Icons.person_outline),
+                      selectedIcon: const Icon(Icons.person),
+                      label: l10n.navProfile,
+                    ),
+                  ],
+                ),
+        ),
       ),
     );
   }

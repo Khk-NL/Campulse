@@ -1,4 +1,4 @@
-import { AdminClient, collections, sections, workspaceViews, editableFields, workspaceSummary } from './admin-client.mjs?v=20261010-console';
+import { AdminClient, collections, sections, workspaceViews, editableFields, workspaceSummary } from './admin-client.mjs?v=20261016-community';
 
 const client = new AdminClient(), $ = id => document.getElementById(id);
 const labels = { owner:'用户 ID', courseId:'课程 ID', title:'标题', content:'正文', email:'邮箱', verified:'邮箱已验证', emailVisibility:'邮箱可见', name:'名称', payload:'内容数据', schemaVersion:'数据版本', front:'卡片正面', back:'卡片背面', due:'下次复习', scheduler:'排程数据', reviewHistory:'复习记录', attachment:'附件', kind:'类型', published:'公开发布', demo:'演示标记', universityId:'学校 ID', noteId:'笔记 ID' };
@@ -98,10 +98,12 @@ function renderCatalog() {
   const community = branch(forge, '社区项目仓库', false, 'repo');
   for (const id of ['community','discussions','replies','stars']) leaf(community, id);
   leaf(user, 'favorites');
+  const square = branch(user, '校园广场', false, 'users');
+  for (const id of ['squarePosts', 'squareInterests', 'squareReplies', 'squareProfiles']) leaf(square, id);
   const directory = branch($('sections'), '公共快速访问', true, 'globe');
   leaf(directory, 'miniPrograms'); leaf(directory, 'websites');
   const operations = branch($('sections'), '公共内容与审核', false, 'shield');
-  for (const id of ['announcements','events','reviews']) leaf(operations, id);
+  for (const id of ['announcements','events','reviews','squareFeed']) leaf(operations, id);
   $('collection').value = client.schemas.has('users') ? 'users' : client.schemas.keys().next().value;
   $('collection-count').textContent = String(client.schemas.size);
 }
