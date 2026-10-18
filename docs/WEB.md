@@ -4,7 +4,7 @@
 
 1.6.0 主导航为“探索 / 我的仓库 / 校园 / 我的”。默认探索已审核项目；个人仓库整理 GitHub 绑定、README 与逐项目审核状态，项目详情承接关注、问题和回复。校园保留课程与课表、通知、官方快速访问，以及约球、组队和扩列的校园广场。笔记、PDF、AI 学习和复习卡片退出客户端主流程，原数据层与网关保留为存量实现。
 
-当前访问 [Campulse Web 工作台](https://campus.allezafrique.cn/app/)，使用与手机相同的普通账号。上线版本与操作证据见[验收记录](ACCEPTANCE.md#公网发布结果)。
+当前访问 [Campulse Web 工作台](https://campus.allezafrique.cn/app/)，使用与手机相同的普通账号。上线版本与操作证据见[验收记录](ACCEPTANCE.md)。
 
 ## 构建与访问
 

@@ -18,6 +18,8 @@
 
 当前公开配置仍指向 campus.allezafrique.cn；正式目标 campus.scsldr.cn 的备案、TLS 和设备恢复按[域名流程](DOMAIN_FILING.md)推进。最近有证据的部署版本、备份和测试数量统一见[验收记录](ACCEPTANCE.md)。
 
+1.6.0 Web 已用 main 的 `6ab5654` 云构建包部署，官网六页同步更新，Android / Windows 云包也已发布。项目创建、审核、发现与交流已经过 API 和浏览器操作；两端新包安装后的点击与重启验收继续跟进，具体证据查验收记录。
+
 ## 此前版本记录
 
 目标 1.5.0 增加 Web：同源浏览器工作台部署在 `/app/`，共用 PocketBase、AI 和业务页面；本地代理支持静态预览与 Flutter 开发模式。Windows/Android 继续云构建。新版侧栏、点阵背景、课程页头插画和快捷入口布局随各端更新。Web 发布与设备证据见[Web 说明](WEB.md)和[验收记录](ACCEPTANCE.md)。本轮保持现有数据库迁移和网关服务版本。

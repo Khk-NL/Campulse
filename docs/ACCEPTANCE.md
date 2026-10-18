@@ -11,7 +11,17 @@
 - 远程项目专项 48 项通过，覆盖独立普通账号、逐项目审核、私有/待审范围、管理员操作、讨论回复、关注与关闭重开。脚本创建的记录已清理。
 - Chrome 使用本机 Web Release 和同源代理连接真实公网后端，实际完成：访客个人仓库跳转账号页、Ctrl+K、普通账号登录、项目创建并转入个人仓库、README 编辑保存、单项目提交审核、批准后进入探索、中文搜索、关注计数、问题发布、回复及标记已解决。独立 API 读回正文、README、回复和关注记录一致。多行输入在显式聚焦后填写，避免辅助输入落在过期语义节点。
 - 桌面 1440×1000 和窄屏 390×844 已查看；课程基本详情、快速访问目录及校园广场类别可见，约球与扩列继续位于广场。自动化 Chrome 标签页曾发生一次崩溃，重载后会话和远程项目恢复，广场复测正常，原因待复现；复测控制台错误采样为零。
-- 发布来源、线上版本和临时浏览器记录清理结果在下方追加。Android / Windows 的新包安装与点击验收另行登记，历史学习流程按对应版本追溯。
+- Android / Windows 的新包安装与点击验收另行登记，历史学习流程按对应版本追溯。
+
+### 1.6.0 公网发布与读回
+
+- 功能源码 `6ab5654fa5d2209bbc930b4444c221b209af12d0` 已推送 main。[工程云检查](https://github.com/Khk-NL/Campulse/actions/runs/39169598517)、[Web 云构建](https://github.com/Khk-NL/Campulse/actions/runs/39169598511)、[Windows 云构建](https://github.com/Khk-NL/Campulse/actions/runs/39169598518)和[Android 云构建](https://github.com/Khk-NL/Campulse/actions/runs/39169598523)全部成功。两端 Release 元数据的来源提交与本轮一致，Android 版本为 1.6.0；APK 由 GitHub 自动构建和发布。
+- Web ZIP 的来源提交、1.6.0 版本和 SHA256 核验通过，经 `update-web.sh` 部署；在线 `/app/version.json` 读回与云包一致。恢复点 `/opt/campus/backups/web-20261019-055355`。本轮沿用数据库、网关和 Caddy 配置。
+- 官网六页增量发布，公网逐页 SHA256 与源码一致，内容集中介绍项目社区及校园辅助功能。旧页面位于 `/opt/campus/backups/site-20261019-6ab5654`。
+- 公网 Chrome 云包实际完成普通用户登录、个人仓库读回、项目详情、关注数量与已解决讨论、回复显示；重载后会话持续有效。GitHub 源码按钮实际打开绑定的仓库地址。Web 入口、JavaScript、CanvasKit Wasm 与 health 均 HTTP 200，Wasm MIME 为 `application/wasm`。
+- 浏览器临时项目、讨论、回复和关注已清理，管理员查询确认相关记录为零；原有测试账号和其他数据保留。重新加载的探索页显示真实项目空态。部署后 PocketBase、AI、Caddy、atop 四项服务 active。
+- 设备剩余验收：安装本轮 Android / Windows 云包，按同账号检查项目创建、审核状态、讨论回复和重启读回。正式域名、邮件收件及微信资质继续按各专项流程推进。
+- Web 构建成功，保留一条 CupertinoIcons 字体裁剪警告；本轮主页面可见图标已经过截图检查，存量模块字体覆盖继续按实际入口验证。
 
 
 ## 2026-10-16 Web 工作台与浏览器实测
@@ -23,7 +33,7 @@
 - 人工查看 1440×1000 的品牌侧栏/页头与 PDF 阅读、390×844 的测验布局。浏览器控制台采样零错误，字体回退报告一条 Noto 字形警告；字体覆盖与不同浏览器仍需继续验证。生成测验出现可同时成立的干扰选项，题目质量另列后续优化，生成与提交链路分别记录。
 - 本轮浏览器验证覆盖上述路径；Web 智能体完整对话、社区发布与讨论、不同浏览器/多账号隔离、邮件及微信链路继续按专项清单验收。Android / Windows 共享视觉变更继续由云构建发布。
 
-### 公网发布结果
+### 1.5.0 公网发布结果
 
 - 功能源码 `b8525ceac0e0b28364807289f81d26561d851315` 已推送 main。[Web 云构建](https://github.com/Khk-NL/Campulse/actions/runs/38878195440)和[工程云检查](https://github.com/Khk-NL/Campulse/actions/runs/38878195498)成功。先部署本机 Web Release 做入口检查，随后用同提交的 GitHub Web ZIP 替换；已核对 Release sourceCommit 与 SHA256。
 - 当前入口为 [Web 工作台](https://campus.allezafrique.cn/app/)，在线 `version.json` 读回版本 1.5.0 和上述提交。静态入口、JS、WebAssembly 均 HTTP 200，WebAssembly MIME 正确；首页、运营台及 health 保持可达。云包替换前恢复点 `/opt/campus/backups/web-20261016-171111`，其内保留上一份本机 Web 包；首次发布恢复点为 `/opt/campus/backups/web-20261016-170737`。
