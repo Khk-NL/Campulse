@@ -107,7 +107,7 @@ abstract class AppLocalizations {
   /// 应用副标题 / app subtitle
   ///
   /// In zh, this message translates to:
-  /// **'校园数字工作台'**
+  /// **'校园代码共享社区'**
   String get appTagline;
 
   /// No description provided for @navHome.
@@ -115,6 +115,24 @@ abstract class AppLocalizations {
   /// In zh, this message translates to:
   /// **'首页'**
   String get navHome;
+
+  /// No description provided for @navExplore.
+  ///
+  /// In zh, this message translates to:
+  /// **'探索'**
+  String get navExplore;
+
+  /// No description provided for @navRepositories.
+  ///
+  /// In zh, this message translates to:
+  /// **'我的仓库'**
+  String get navRepositories;
+
+  /// No description provided for @navCampus.
+  ///
+  /// In zh, this message translates to:
+  /// **'校园'**
+  String get navCampus;
 
   /// No description provided for @navSearch.
   ///
@@ -710,11 +728,11 @@ abstract class AppLocalizations {
   /// **'教学周'**
   String get courseWeeksLabel;
 
-  /// 教学周范围（§9）/ the teaching week range
+  /// 教学周范围
   ///
   /// In zh, this message translates to:
   /// **'第 {start}–{end} 周'**
-  String courseWeeksRange(Object end, Object start);
+  String courseWeeksRange(int start, int end);
 
   /// 「应用」Tab 的标题（底部栏叫「应用」，内容是校园服务入口）/ the Apps tab title
   ///

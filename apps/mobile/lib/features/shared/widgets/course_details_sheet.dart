@@ -10,7 +10,6 @@ library;
 
 import 'package:campus_mobile/data/models/course.dart';
 import 'package:campus_mobile/features/shared/widgets/state_views.dart';
-import 'package:campus_mobile/features/study/course_space_entry.dart';
 import 'package:campus_mobile/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 
@@ -20,28 +19,14 @@ Future<void> showCourseDetails(BuildContext context, {required Course course}) {
     context: context,
     isScrollControlled: true,
     showDragHandle: true,
-    builder: (BuildContext sheetContext) => _CourseDetailsSheet(
-      course: course,
-      onOpenSpace: () {
-        Navigator.of(sheetContext).pop();
-        if (context.mounted) {
-          Navigator.of(context).push<void>(
-            MaterialPageRoute<void>(
-              builder: (BuildContext context) =>
-                  CourseSpaceEntry(course: course),
-            ),
-          );
-        }
-      },
-    ),
+    builder: (BuildContext sheetContext) => _CourseDetailsSheet(course: course),
   );
 }
 
 class _CourseDetailsSheet extends StatelessWidget {
-  const _CourseDetailsSheet({required this.course, required this.onOpenSpace});
+  const _CourseDetailsSheet({required this.course});
 
   final Course course;
-  final VoidCallback onOpenSpace;
 
   @override
   Widget build(BuildContext context) {
@@ -85,15 +70,6 @@ class _CourseDetailsSheet extends StatelessWidget {
                 context,
                 l10n.courseWeeksLabel,
                 l10n.courseWeeksRange(course.startWeek, course.endWeek),
-              ),
-              const SizedBox(height: 12),
-              SizedBox(
-                width: double.infinity,
-                child: FilledButton.icon(
-                  onPressed: onOpenSpace,
-                  icon: const Icon(Icons.auto_stories_outlined),
-                  label: const Text('进入课程空间'),
-                ),
               ),
             ],
           ),

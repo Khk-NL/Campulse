@@ -21,6 +21,7 @@ import 'package:campus_mobile/data/models/course.dart';
 import 'package:campus_mobile/l10n/app_localizations.dart';
 
 import 'fixtures/in_memory_campus_repository.dart';
+import 'fixtures/project_focus_repository.dart';
 
 ResultList<RecordModel> result(List<RecordModel> rows) => ResultList(
   page: 1,
@@ -246,7 +247,9 @@ void main() {
         tester.view.resetDevicePixelRatio();
       });
       final app = await state();
-      await tester.pumpWidget(wrap(app, const AppShell()));
+      await tester.pumpWidget(
+        wrap(app, AppShell(forgeRepository: ProjectFocusRepository())),
+      );
       await tester.pumpAndSettle();
       expect(find.byType(NavigationRail), findsOneWidget);
       expect(find.byType(NavigationBar), findsNothing);

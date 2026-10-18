@@ -10,7 +10,7 @@ window.addEventListener('flutter-first-frame', () => document.getElementById('bo
 _flutter.loader.load({
   onEntrypointLoaded: async function(engineInitializer) {
     try {
-      status.textContent = '正在准备课程与社区…';
+      status.textContent = '正在准备项目与讨论…';
       const appRunner = await engineInitializer.initializeEngine();
       await appRunner.runApp();
     } catch (error) { failed(); console.error(error); }

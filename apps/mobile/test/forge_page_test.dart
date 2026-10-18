@@ -382,7 +382,7 @@ void main() {
       final repo = FakeForge();
       await tester.pumpWidget(MaterialApp(home: ForgePage(repository: repo)));
       await tester.pumpAndSettle();
-      await tester.tap(find.byTooltip('创建项目'));
+      await tester.tap(find.widgetWithText(FilledButton, '发布项目'));
       await tester.pumpAndSettle();
       await tester.enterText(find.widgetWithText(TextField, '项目名称'), '校园工具');
       await tester.tap(find.widgetWithText(FilledButton, '保存'));

@@ -13,10 +13,19 @@ class AppLocalizationsEn extends AppLocalizations {
   String get appTitle => 'Campulse';
 
   @override
-  String get appTagline => 'Campulse digital workbench';
+  String get appTagline => 'Campus code-sharing community';
 
   @override
   String get navHome => 'Home';
+
+  @override
+  String get navExplore => 'Explore';
+
+  @override
+  String get navRepositories => 'Repositories';
+
+  @override
+  String get navCampus => 'Campus';
 
   @override
   String get navSearch => 'Search';
@@ -355,7 +364,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get courseWeeksLabel => 'Teaching weeks';
 
   @override
-  String courseWeeksRange(Object end, Object start) {
+  String courseWeeksRange(int start, int end) {
     return 'Weeks $start–$end';
   }
 

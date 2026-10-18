@@ -1,10 +1,13 @@
 {
   "@@locale": "zh",
   "appTitle": "Campulse",
-  "appTagline": "校园数字工作台",
+  "appTagline": "校园代码共享社区",
   "@appTagline": { "description": "应用副标题 / app subtitle" },
 
   "navHome": "首页",
+  "navExplore": "探索",
+  "navRepositories": "我的仓库",
+  "navCampus": "校园",
   "navSearch": "搜索",
   "navInbox": "事务",
   "navStore": "应用",
@@ -127,7 +130,7 @@
   "courseTeacherLabel": "任课教师",
   "courseWeeksLabel": "教学周",
   "courseWeeksRange": "第 {start}–{end} 周",
-  "@courseWeeksRange": { "description": "教学周范围（§9）/ the teaching week range" },
+  "@courseWeeksRange": { "description": "教学周范围", "placeholders": { "start": { "type": "int" }, "end": { "type": "int" } } },
 
   "appsTitle": "应用",
   "appsQuickAccess": "快速入口",

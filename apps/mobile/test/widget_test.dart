@@ -1,21 +1,4 @@
-/// Widget 冒烟测试 / a widget smoke test.
-///
-/// 本轮界面结构改成了 **4 Tab**：首页 / 应用 / 课程 / 我的，`搜索` 与 `通知` 从底部栏
-/// 移到顶部栏（AppBar actions）并成为**推入的路由页**。这个测试就是新结构的验收：
-///
-///   1. 底部栏**只有**4 个 Tab，旧的 `搜索` / `事务` 不再出现在导航里；
-///   2. 顶部栏的两个入口真的能打开搜索页与通知页（并且能返回）；
-///   3. 课程表页面能渲染出教学周与课程；
-///   4. 「我的」仍能看到语言切换（§0.8）。
-///
-/// The interface is now **four tabs** (Home / Apps / Courses / Profile), with `Search` and
-/// `Notifications` moved into the AppBar as **pushed routes**. This test is the acceptance
-/// for that: the bottom bar holds exactly four tabs and no longer offers Search or Inbox;
-/// both top-bar entries really open their screens and come back; the timetable renders a
-/// teaching week and courses; Profile still exposes the language switcher (§0.8).
-///
-/// 全部使用内存仓库，因此测试不需要后端，也不会碰网络。
-/// Everything uses the in-memory repository, so no backend and no network are involved.
+/// 项目优先导航、校园辅助工具与个性化设置的组件验收。
 library;
 
 import 'package:campus_mobile/core/app_scope_repository.dart';
@@ -27,11 +10,11 @@ import 'package:campus_mobile/core/locale_resolution.dart';
 import 'package:campus_mobile/core/theme/campus_theme.dart';
 
 import 'fixtures/in_memory_campus_repository.dart';
+import 'fixtures/project_focus_repository.dart';
 
 import 'package:campus_mobile/features/inbox/inbox_page.dart';
-import 'package:campus_mobile/features/search/search_page.dart';
+import 'package:campus_mobile/features/apps/forge_page.dart';
 import 'package:campus_mobile/features/study/course_hub_page.dart';
-import 'package:campus_mobile/features/study/study_page.dart';
 import 'package:campus_mobile/features/profile/profile_page.dart';
 import 'package:campus_mobile/features/shell/app_shell.dart';
 import 'package:campus_mobile/features/timetable/timetable_page.dart';
@@ -71,20 +54,22 @@ void main() {
           localeResolutionCallback: resolveSupportedLocale,
           supportedLocales: AppLocalizations.supportedLocales,
           localizationsDelegates: AppLocalizations.localizationsDelegates,
-          home: const AppShell(),
+          home: AppShell(forgeRepository: ProjectFocusRepository()),
         ),
       ),
     );
   }
 
-  testWidgets('课程列表与课程表平级切换，智能体留在课程内', (tester) async {
+  testWidgets('校园入口保留课程列表与课表切换', (tester) async {
     final state = await buildState();
     await tester.pumpWidget(wrap(state));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('课程').last);
+    await tester.tap(find.text('校园').last);
     await tester.pumpAndSettle();
     expect(find.text('课程列表'), findsOneWidget);
     expect(find.text('按智能体'), findsNothing);
+    expect(find.text('我的计划'), findsNothing);
+    expect(find.text('资料 · 提问 · 复习'), findsNothing);
     await tester.tap(find.text('课程表'));
     await tester.pumpAndSettle();
     expect(find.byType(TimetablePage), findsOneWidget);
@@ -105,6 +90,8 @@ void main() {
     final tiles = tester.widgetList<ExpansionTile>(find.byType(ExpansionTile));
     expect(tiles.length, 2);
     expect(tiles.every((tile) => !tile.initiallyExpanded), isTrue);
+    expect(find.text('我的学习'), findsNothing);
+    expect(find.text('计划与归档'), findsNothing);
     await tester.tap(find.byTooltip('个性化'));
     await tester.pumpAndSettle();
     await tester.enterText(find.byType(TextField).first, '小夏');
@@ -129,14 +116,14 @@ void main() {
         tester.widget<NavigationBar>(find.byType(NavigationBar));
     expect(
       (navigation().destinations.first as NavigationDestination).label,
-      '首页',
+      '探索',
     );
 
     await state.setLocale(const Locale('en'));
     await tester.pumpAndSettle();
     expect(
       (navigation().destinations.first as NavigationDestination).label,
-      'Home',
+      'Explore',
     );
 
     await state.setThemeMode(ThemeMode.dark);
@@ -169,9 +156,9 @@ void main() {
       reason: '底部栏必须有且仅有 4 个 Tab',
     );
 
-    expect(find.text(l10n.navHome), findsWidgets);
-    expect(find.text(l10n.navStore), findsWidgets);
-    expect(find.text(l10n.navTimetable), findsWidgets);
+    expect(find.text(l10n.navExplore), findsWidgets);
+    expect(find.text(l10n.navRepositories), findsWidgets);
+    expect(find.text(l10n.navCampus), findsWidgets);
     expect(find.text(l10n.navProfile), findsWidgets);
 
     // 旧的「搜索」「事务」不再占据底部栏位置。
@@ -213,9 +200,7 @@ void main() {
     state.dispose();
   });
 
-  testWidgets('顶部栏的通知与搜索入口可用 / the top bar opens notifications and search', (
-    WidgetTester tester,
-  ) async {
+  testWidgets('顶部栏聚焦项目搜索并可打开通知', (WidgetTester tester) async {
     final AppState state = await buildState();
     await tester.pumpWidget(wrap(state));
     await tester.pumpAndSettle();
@@ -231,15 +216,14 @@ void main() {
 
     await tester.tap(find.byTooltip(l10n.navSearch));
     await tester.pumpAndSettle();
-    expect(find.byType(SearchPage), findsOneWidget);
-    expect(find.text(l10n.searchTitle), findsWidgets);
-
-    // 返回后再打开通知页。用 Navigator 直接 pop，避免依赖平台相关的返回按钮实现。
-    // Go back, then open the notification screen. Popping the Navigator directly avoids
-    // depending on a platform-specific back button implementation.
-    tester.state<NavigatorState>(find.byType(Navigator)).pop();
-    await tester.pumpAndSettle();
-    expect(find.byType(SearchPage), findsNothing);
+    expect(find.byType(ForgePage), findsOneWidget);
+    expect(
+      tester
+          .widget<TextField>(find.widgetWithText(TextField, '搜索项目'))
+          .focusNode!
+          .hasFocus,
+      isTrue,
+    );
 
     await tester.tap(find.byTooltip(l10n.navNotification));
     await tester.pumpAndSettle();
@@ -260,7 +244,7 @@ void main() {
       tester.element(find.byType(NavigationBar)),
     );
 
-    await tester.tap(find.text(l10n.navTimetable).last);
+    await tester.tap(find.text(l10n.navCampus).last);
     await tester.pumpAndSettle();
     await tester.tap(find.text('打开课程表'));
     await tester.pumpAndSettle();
@@ -305,7 +289,7 @@ void main() {
 
     state.dispose();
   });
-  testWidgets('课程列表和课表详情通向同一课程空间', (WidgetTester tester) async {
+  testWidgets('课程列表与课表统一显示基础详情', (WidgetTester tester) async {
     final AppState state = await buildState();
     await tester.pumpWidget(wrap(state));
     await tester.pumpAndSettle();
@@ -313,25 +297,32 @@ void main() {
     final AppLocalizations l10n = AppLocalizations.of(
       tester.element(find.byType(NavigationBar)),
     );
-    await tester.tap(find.text(l10n.navTimetable).last);
+    await tester.tap(find.text(l10n.navCampus).last);
     await tester.pumpAndSettle();
     expect(find.text('我的课程'), findsOneWidget);
-    expect(find.textContaining('演示课程'), findsWidgets);
-    expect(find.text('演示课程 · 未同步'), findsNothing);
     final Finder courseInHub = find.descendant(
       of: find.byType(CourseHubPage),
       matching: find.text('现代软件工程'),
     );
-    await tester.ensureVisible(courseInHub);
+    await tester.scrollUntilVisible(
+      courseInHub,
+      250,
+      scrollable: find
+          .descendant(
+            of: find.byType(CourseHubPage),
+            matching: find.byType(Scrollable),
+          )
+          .first,
+    );
     await tester.pumpAndSettle();
+    expect(find.textContaining('演示课程'), findsWidgets);
     await tester.tap(courseInHub);
     await tester.pumpAndSettle();
-    expect(find.byType(StudyPage), findsOneWidget);
     expect(find.text('现代软件工程'), findsWidgets);
-    await tester.tap(find.text('提问'));
-    await tester.pumpAndSettle();
-    expect(find.text('围绕这门课继续探究'), findsOneWidget);
-    expect(find.text('引用范围 · 已选 0 份资料'), findsOneWidget);
+    expect(find.text(l10n.courseTeacherLabel), findsOneWidget);
+    expect(find.text(l10n.courseWeeksLabel), findsOneWidget);
+    expect(find.text('进入课程空间'), findsNothing);
+    expect(find.text('引用范围 · 已选 0 份资料'), findsNothing);
     await tester.binding.handlePopRoute();
     await tester.pumpAndSettle();
     await tester.scrollUntilVisible(
@@ -356,9 +347,10 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(courseInTimetable);
     await tester.pumpAndSettle();
-    await tester.tap(find.text('进入课程空间'));
-    await tester.pumpAndSettle();
     expect(find.text('现代软件工程'), findsWidgets);
+    expect(find.text(l10n.courseTeacherLabel), findsOneWidget);
+    expect(find.text(l10n.courseWeeksLabel), findsOneWidget);
+    expect(find.text('进入课程空间'), findsNothing);
     state.dispose();
   });
 }

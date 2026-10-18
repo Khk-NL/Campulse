@@ -13,10 +13,19 @@ class AppLocalizationsZh extends AppLocalizations {
   String get appTitle => 'Campulse';
 
   @override
-  String get appTagline => '校园数字工作台';
+  String get appTagline => '校园代码共享社区';
 
   @override
   String get navHome => '首页';
+
+  @override
+  String get navExplore => '探索';
+
+  @override
+  String get navRepositories => '我的仓库';
+
+  @override
+  String get navCampus => '校园';
 
   @override
   String get navSearch => '搜索';
@@ -348,7 +357,7 @@ class AppLocalizationsZh extends AppLocalizations {
   String get courseWeeksLabel => '教学周';
 
   @override
-  String courseWeeksRange(Object end, Object start) {
+  String courseWeeksRange(int start, int end) {
     return '第 $start–$end 周';
   }
 

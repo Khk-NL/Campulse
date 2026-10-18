@@ -18,17 +18,16 @@ import 'package:campus_mobile/l10n/app_localizations.dart';
 import 'theme_color_settings.dart';
 
 import 'package:campus_mobile/features/shared/widgets/workspace_layout.dart';
-import 'package:campus_mobile/features/study/course_hub_page.dart';
-import 'package:campus_mobile/features/study/course_space_entry.dart';
 import 'package:campus_mobile/features/apps/apps_page.dart';
 import 'package:campus_mobile/features/apps/forge_page.dart';
-import 'package:campus_mobile/features/community/community_page.dart';
+import 'package:campus_mobile/features/shell/shell_routes.dart';
 
 import 'package:flutter/material.dart';
 
 /// 我的 / the profile screen.
 class ProfilePage extends StatefulWidget {
-  const ProfilePage({super.key});
+  const ProfilePage({super.key, this.onOpenRepositories});
+  final VoidCallback? onOpenRepositories;
 
   @override
   State<ProfilePage> createState() => _ProfilePageState();
@@ -185,12 +184,14 @@ class _ProfilePageState extends State<ProfilePage> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          english ? 'My workspace' : '我的工作区',
+          english ? 'Projects & updates' : '我的项目与消息',
           style: Theme.of(context).textTheme.titleLarge,
         ),
         const SizedBox(height: 6),
         Text(
-          english ? 'Pick up your work from one place.' : '常用内容与个人创作，集中整理。',
+          english
+              ? 'Manage projects, campus updates and saved services.'
+              : '管理作品，查看校园通知与常用入口。',
           style: Theme.of(context).textTheme.bodyMedium
               ?.copyWith(color: scheme.onSurfaceVariant),
         ),
@@ -198,44 +199,30 @@ class _ProfilePageState extends State<ProfilePage> {
         WorkspaceGrid(
           children: [
             WorkspaceAction(
-              title: english ? 'Campus square' : '我的校园圈',
-              subtitle: english
-                  ? 'Teams, meetups & interests'
-                  : '竞赛组队 · 运动约局 · 兴趣名片',
-              icon: Icons.groups_outlined,
-              color: scheme.tertiary,
-              onTap: () => open(
-                english ? 'Campus square' : '校园广场',
-                const CommunityPage(),
-              ),
-            ),
-            WorkspaceAction(
-              title: english ? 'My learning' : '我的学习',
-              subtitle: english ? 'Courses, sources & cards' : '课程 · 资料 · 复习卡片',
-              icon: Icons.auto_stories_outlined,
-              onTap: () =>
-                  open(english ? 'Learning' : '学习', const CourseHubPage()),
-            ),
-            WorkspaceAction(
-              title: english ? 'My plans' : '计划与归档',
-              subtitle: english ? 'Tasks & completed work' : '安排待办，查看已完成',
-              icon: Icons.checklist_rounded,
-              color: scheme.secondary,
-              onTap: () => open(
-                '',
-                const CourseSpaceEntry(plansOnly: true),
-                scaffold: false,
-              ),
-            ),
-            WorkspaceAction(
               title: english ? 'My repositories' : '个人仓库',
               subtitle: english
                   ? 'Projects, reviews & discussions'
                   : '自己的项目 · 审核 · 讨论',
               icon: Icons.source_outlined,
               color: scheme.tertiary,
-              onTap: () =>
-                  open('', const ForgePage(initialMine: true), scaffold: false),
+              onTap:
+                  widget.onOpenRepositories ??
+                  () => open(
+                    '',
+                    ForgePage(
+                      initialMine: true,
+                      showViewSwitcher: false,
+                      onOpenAccount: () => Navigator.of(context).pop(),
+                    ),
+                    scaffold: false,
+                  ),
+            ),
+            WorkspaceAction(
+              title: english ? 'Notifications' : '我的通知',
+              subtitle: english ? 'Courses & campus updates' : '课程通知 · 校园消息',
+              icon: Icons.notifications_outlined,
+              color: scheme.secondary,
+              onTap: () => openNotificationCenter(context),
             ),
             WorkspaceAction(
               title: english ? 'Saved services' : '收藏的入口',
@@ -244,7 +231,7 @@ class _ProfilePageState extends State<ProfilePage> {
               color: scheme.primary,
               onTap: () => open(
                 english ? 'Favorites' : '收藏',
-                const AppsPage(initialFavorites: true),
+                const AppsPage(initialFavorites: true, quickAccessOnly: true),
               ),
             ),
           ],

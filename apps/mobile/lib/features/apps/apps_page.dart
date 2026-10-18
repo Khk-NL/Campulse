@@ -40,9 +40,11 @@ class AppsPage extends StatefulWidget {
     super.key,
     this.refreshToken = 0,
     this.initialFavorites = false,
+    this.quickAccessOnly = false,
   });
   final int refreshToken;
   final bool initialFavorites;
+  final bool quickAccessOnly;
 
   @override
   State<AppsPage> createState() => _AppsPageState();
@@ -226,6 +228,7 @@ class _AppsPageState extends State<AppsPage> {
   @override
   Widget build(BuildContext context) {
     final AppLocalizations l10n = AppLocalizations.of(context);
+    if (widget.quickAccessOnly) return _quickAccess(context, l10n);
     // 只返回内容：顶部栏由 AppShell 统一提供（应用 Tab）。
     // Content only: the shell supplies the shared top bar for the Apps tab.
     return Column(

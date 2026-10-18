@@ -50,7 +50,8 @@ class _NoticeInputs {
 
 /// 课程表 / the timetable.
 class TimetablePage extends StatefulWidget {
-  const TimetablePage({super.key});
+  const TimetablePage({super.key, this.refreshToken = 0});
+  final int refreshToken;
 
   @override
   State<TimetablePage> createState() => _TimetablePageState();
@@ -90,6 +91,12 @@ class _TimetablePageState extends State<TimetablePage> {
 
   /// 首次加载已经排过队了吗。/ whether the first load has already been queued.
   bool _loadQueued = false;
+
+  @override
+  void didUpdateWidget(TimetablePage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.refreshToken != oldWidget.refreshToken) _load();
+  }
 
   @override
   void didChangeDependencies() {

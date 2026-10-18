@@ -2,14 +2,15 @@ import 'package:campus_mobile/core/app_scope_repository.dart';
 import 'package:campus_mobile/core/app_state.dart';
 import 'package:campus_mobile/core/pocketbase_session.dart';
 import 'package:campus_mobile/data/models/course.dart';
-import 'package:campus_mobile/features/study/course_space_entry.dart';
+import 'package:campus_mobile/features/inbox/inbox_page.dart';
+import 'package:campus_mobile/features/shared/widgets/course_details_sheet.dart';
 import 'package:campus_mobile/features/timetable/timetable_page.dart';
 import 'package:campus_mobile/features/timetable/course_import_page.dart';
 import 'package:campus_mobile/features/timetable/user_course_repository.dart';
 import 'package:flutter/material.dart';
 import 'package:campus_mobile/features/shared/widgets/workspace_layout.dart';
 
-/// 课程是一级对象；课表是时间视图，课程空间是单门课的学习记录。
+/// 校园辅助工具：课程基础信息、课表与通知。
 class CourseHubPage extends StatefulWidget {
   const CourseHubPage({super.key, this.active = true, this.refreshToken = 0});
   final bool active;
@@ -88,9 +89,13 @@ class _CourseHubPageState extends State<CourseHubPage> {
   }
 
   void _openCourse(Course course) {
+    showCourseDetails(context, course: course);
+  }
+
+  void _openNotifications() {
     Navigator.of(context).push<void>(
       MaterialPageRoute<void>(
-        builder: (BuildContext context) => CourseSpaceEntry(course: course),
+        builder: (BuildContext context) => const InboxPage(pushed: true),
       ),
     );
   }
@@ -135,7 +140,7 @@ class _CourseHubPageState extends State<CourseHubPage> {
       return Column(
         children: <Widget>[
           _viewSwitcher(),
-          const Expanded(child: TimetablePage()),
+          Expanded(child: TimetablePage(refreshToken: widget.refreshToken)),
         ],
       );
     }
@@ -151,11 +156,11 @@ class _CourseHubPageState extends State<CourseHubPage> {
           const SizedBox(height: 12),
           WorkspaceBanner(
             vivid: true,
-            eyebrow: 'LEARNING LIBRARY',
+            eyebrow: 'CAMPUS ESSENTIALS',
             title: _text('我的课程', 'My courses'),
             subtitle: _text(
-              '把教材、笔记、提问和复习收进每一门课。',
-              'One space for your sources, notes, questions and review.',
+              '课表、上课地点与课程通知，日常校园事务集中查看。',
+              'Keep your timetable, classrooms and campus notices together.',
             ),
             icon: Icons.auto_stories_outlined,
             actions: <Widget>[
@@ -170,13 +175,9 @@ class _CourseHubPageState extends State<CourseHubPage> {
                 label: const Text('导入课程'),
               ),
               OutlinedButton.icon(
-                onPressed: () => Navigator.of(context).push<void>(
-                  MaterialPageRoute<void>(
-                    builder: (_) => const CourseSpaceEntry(plansOnly: true),
-                  ),
-                ),
-                icon: const Icon(Icons.checklist_outlined),
-                label: const Text('我的计划'),
+                onPressed: _openNotifications,
+                icon: const Icon(Icons.notifications_outlined),
+                label: Text(_text('查看通知', 'View notices')),
               ),
             ],
           ),
@@ -377,11 +378,11 @@ class _CourseHubPageState extends State<CourseHubPage> {
               const SizedBox(height: 18),
               Row(
                 children: [
-                  Icon(Icons.library_books_outlined, size: 16, color: accent),
+                  Icon(Icons.info_outline, size: 16, color: accent),
                   const SizedBox(width: 6),
                   Expanded(
                     child: Text(
-                      _text('资料 · 提问 · 复习', 'Sources · Ask · Review'),
+                      _text('教师 · 教室 · 上课时间', 'Teacher · Room · Schedule'),
                       style: theme.textTheme.labelMedium,
                     ),
                   ),

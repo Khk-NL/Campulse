@@ -15,11 +15,23 @@ class ForgePage extends StatefulWidget {
     this.embedded = false,
     this.initialMine = false,
     this.refreshToken = 0,
+    this.showViewSwitcher = true,
+    this.searchFocusNode,
+    this.onOpenAccount,
+    this.onOpenRepositories,
+    this.active = true,
+    this.resetSearchToken = 0,
   });
   final ForgeRepository? repository;
   final bool embedded;
   final bool initialMine;
   final int refreshToken;
+  final bool showViewSwitcher;
+  final FocusNode? searchFocusNode;
+  final VoidCallback? onOpenAccount;
+  final VoidCallback? onOpenRepositories;
+  final bool active;
+  final int resetSearchToken;
   @override
   State<ForgePage> createState() => _ForgePageState();
 }
@@ -44,13 +56,25 @@ class _ForgePageState extends State<ForgePage> {
   }
 
   void load() {
-    result = repo?.projects(page: page, query: query, mine: mine);
+    result = mine && (repo?.userId.isEmpty ?? true)
+        ? null
+        : repo?.projects(page: page, query: query, mine: mine);
   }
 
   @override
   void didUpdateWidget(ForgePage oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (widget.refreshToken != oldWidget.refreshToken) setState(load);
+    if (widget.resetSearchToken != oldWidget.resetSearchToken) {
+      searchDebounce?.cancel();
+      searchController.clear();
+      query = '';
+      page = 1;
+    }
+    if (widget.refreshToken != oldWidget.refreshToken ||
+        widget.resetSearchToken != oldWidget.resetSearchToken ||
+        (widget.active && !oldWidget.active)) {
+      setState(load);
+    }
   }
 
   void search(String value) {
@@ -71,10 +95,52 @@ class _ForgePageState extends State<ForgePage> {
     super.dispose();
   }
 
+  Future<void> _createProject() async {
+    final repository = repo;
+    if (repository == null || !repository.canWrite) {
+      widget.onOpenAccount?.call();
+      return;
+    }
+    final saved = await showProjectEditor(context, repository);
+    if (saved && mounted) {
+      if (!mine && widget.onOpenRepositories != null) {
+        widget.onOpenRepositories!();
+        return;
+      }
+      setState(() {
+        page = 1;
+        load();
+      });
+    }
+  }
+
+  Widget _guestRepositories() => ListView(
+    padding: const EdgeInsets.all(20),
+    children: [
+      const WorkspaceBanner(
+        vivid: true,
+        eyebrow: 'YOUR REPOSITORIES',
+        title: '让项目有一个校园主页',
+        subtitle: '绑定 GitHub，整理 README，提交自己的校园作品。',
+        icon: Icons.source_outlined,
+      ),
+      const SizedBox(height: 24),
+      Center(
+        child: FilledButton.icon(
+          onPressed: widget.onOpenAccount,
+          icon: const Icon(Icons.login),
+          label: const Text('登录管理仓库'),
+        ),
+      ),
+    ],
+  );
+
   @override
   Widget build(BuildContext context) => Scaffold(
     appBar: widget.embedded ? null : AppBar(title: const Text('校园社区')),
-    body: repo == null
+    body: mine && (repo?.userId.isEmpty ?? true)
+        ? _guestRepositories()
+        : repo == null
         ? const Center(child: Text('连接校园服务后参与项目交流'))
         : Column(
             children: [
@@ -85,59 +151,55 @@ class _ForgePageState extends State<ForgePage> {
                   children: [
                     Row(
                       children: [
-                        Expanded(
-                          child: SegmentedButton<bool>(
-                            showSelectedIcon: false,
-                            segments: const [
-                              ButtonSegment(
-                                value: false,
-                                label: Text('发现项目'),
-                                icon: Icon(Icons.explore_outlined),
-                              ),
-                              ButtonSegment(
-                                value: true,
-                                label: Text('我的仓库'),
-                                icon: Icon(Icons.folder_open),
-                              ),
-                            ],
-                            selected: {mine},
-                            onSelectionChanged: (value) => setState(() {
-                              searchDebounce?.cancel();
-                              query = searchController.text.trim();
-                              mine = value.first;
-                              page = 1;
-                              load();
-                            }),
+                        if (widget.showViewSwitcher)
+                          Expanded(
+                            child: SegmentedButton<bool>(
+                              showSelectedIcon: false,
+                              segments: const [
+                                ButtonSegment(
+                                  value: false,
+                                  label: Text('发现项目'),
+                                  icon: Icon(Icons.explore_outlined),
+                                ),
+                                ButtonSegment(
+                                  value: true,
+                                  label: Text('我的仓库'),
+                                  icon: Icon(Icons.folder_open),
+                                ),
+                              ],
+                              selected: {mine},
+                              onSelectionChanged: (value) => setState(() {
+                                searchDebounce?.cancel();
+                                query = searchController.text.trim();
+                                mine = value.first;
+                                page = 1;
+                                load();
+                              }),
+                            ),
                           ),
-                        ),
-                        const SizedBox(width: 12),
-                        IconButton.filledTonal(
-                          tooltip: '创建项目',
-                          onPressed: repo!.canWrite
-                              ? () async {
-                                  final saved = await showProjectEditor(
-                                    context,
-                                    repo!,
-                                  );
-                                  if (saved && mounted) {
-                                    setState(() {
-                                      page = 1;
-                                      load();
-                                    });
-                                  }
-                                }
+                        if (widget.showViewSwitcher)
+                          const SizedBox(width: 12)
+                        else
+                          const Spacer(),
+                        FilledButton.icon(
+                          onPressed:
+                              repo!.canWrite || widget.onOpenAccount != null
+                              ? _createProject
                               : null,
                           icon: const Icon(Icons.add),
+                          label: Text(mine ? '创建项目' : '发布项目'),
                         ),
                       ],
                     ),
                     const SizedBox(height: 12),
                     TextField(
                       controller: searchController,
+                      focusNode: widget.searchFocusNode,
                       textInputAction: TextInputAction.search,
                       decoration: InputDecoration(
                         prefixIcon: const Icon(Icons.search),
                         hintText: '搜索项目、介绍或技术话题',
+                        labelText: mine ? '搜索我的仓库' : '搜索项目',
                         suffixIcon: IconButton(
                           tooltip: '清空搜索',
                           icon: const Icon(Icons.clear),
@@ -179,11 +241,12 @@ class _ForgePageState extends State<ForgePage> {
                         padding: const EdgeInsets.symmetric(horizontal: 16),
                         children: [
                           WorkspaceBanner(
-                            eyebrow: 'CAMPULSE COMMUNITY',
+                            vivid: true,
+                            eyebrow: 'CAMPUS CODE COMMUNITY',
                             title: mine ? '从想法到作品' : '一起构建校园',
                             subtitle: mine
                                 ? '管理自己的项目，提交审核，记录迭代。'
-                                : '发现项目 · 提出问题 · 分享进展 · 参与讨论',
+                                : '找到同学的代码与工具，围绕项目交流，一起解决校园里的问题。',
                             icon: mine
                                 ? Icons.inventory_2_outlined
                                 : Icons.forum_outlined,
@@ -195,9 +258,51 @@ class _ForgePageState extends State<ForgePage> {
                           ),
                           const SizedBox(height: 8),
                           if (rows.items.isEmpty)
-                            const Padding(
-                              padding: EdgeInsets.all(32),
-                              child: Text('从一个校园需求开始，发布项目或调整搜索词。'),
+                            Padding(
+                              padding: const EdgeInsets.symmetric(vertical: 36),
+                              child: Column(
+                                children: [
+                                  Icon(
+                                    query.isEmpty
+                                        ? Icons.terminal
+                                        : Icons.search,
+                                    size: 44,
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .tertiary,
+                                  ),
+                                  const SizedBox(height: 14),
+                                  Text(
+                                    query.isNotEmpty
+                                        ? '换个项目名或技术话题试试'
+                                        : mine
+                                        ? '把你的第一个项目放到这里'
+                                        : '从一个校园需求开始',
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .titleMedium,
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    query.isNotEmpty
+                                        ? '搜索项目名称、介绍和技术话题。'
+                                        : mine
+                                        ? '添加源码链接和介绍，准备好后提交审核。'
+                                        : '上架后的作品会出现在这里，也欢迎分享你正在做的工具。',
+                                    textAlign: TextAlign.center,
+                                  ),
+                                  if (query.isEmpty &&
+                                      (repo!.canWrite ||
+                                          widget.onOpenAccount != null)) ...[
+                                    const SizedBox(height: 16),
+                                    OutlinedButton.icon(
+                                      onPressed: _createProject,
+                                      icon: const Icon(Icons.add),
+                                      label: Text(mine ? '创建项目' : '分享我的项目'),
+                                    ),
+                                  ],
+                                ],
+                              ),
                             ),
                           for (final item in rows.items) _repositoryCard(item),
                           _Pager(

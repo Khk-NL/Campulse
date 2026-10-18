@@ -1,11 +1,11 @@
 {
-  "name": "Campulse · 校园工作台",
+  "name": "Campulse · 校园代码共享社区",
   "short_name": "Campulse",
   "start_url": ".",
   "scope": ".",
   "display": "standalone",
   "background_color": "#f7f6f3",
   "theme_color": "#A41F35",
-  "description": "课程、笔记、复习与校园项目社区",
+  "description": "发现项目、分享源码与项目讨论，附带课表和校园服务",
   "icons": [{ "src": "icon.png", "sizes": "512x512", "type": "image/png", "purpose": "any" }]
 }

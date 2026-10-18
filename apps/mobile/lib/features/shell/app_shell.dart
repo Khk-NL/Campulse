@@ -1,29 +1,5 @@
-/// 应用外壳：底部 4 Tab 导航 + 统一顶部栏 / the app shell: four bottom tabs and one top bar.
-///
-/// §13-Phase 0 原本指定五个入口（Home / Search / Inbox / Store / Profile）。本轮的界面
-/// 结构把这五个入口重新分工：
-///
-///   * 底部栏只留 **首页 / 应用 / 课程 / 我的** 四个；课程是主入口，课表是时间视图；
-///   * **搜索** 与 **通知（事务）** 从底部栏移到顶部栏，成为**推入的路由页**。
-///
-/// 这么分不是审美偏好，而是依据"频率与层级"：搜索与通知是随时可能触发的**动作**，
-/// 放底部栏会长期占掉两个位置，而底部栏的位置应该留给"我平时待在哪儿"。顶部栏由
-/// 外壳统一持有（标题随当前 Tab 变化），因此从任何一个 Tab 都能一眼看到这两个入口，
-/// 且它们的行为完全一致。
-///
-/// Phase 0 fixed five entries (Home, Search, Inbox, Store, Profile). This round regroups
-/// them: the bottom bar keeps **Home, Apps, Courses, Profile** only, while **Search** and
-/// **Notifications (inbox)** move up into the AppBar as **pushed routes**.
-///
-/// That split follows frequency and hierarchy rather than taste: search and notifications
-/// are *actions* that can fire from anywhere, and giving them two permanent bottom slots
-/// costs the bar its real job — the few places a user actually lives in. The shell owns one
-/// AppBar (its title follows the active tab), so both entries are reachable and behave
-/// identically from every tab.
-///
-/// 用 `IndexedStack` 而不是按需构建，是为了让每个 Tab 的滚动位置与已加载数据在切换后保留。
-/// `IndexedStack` rather than lazy construction keeps each tab's scroll position and loaded
-/// data across switches, which the timetable especially needs after moving weeks.
+/// 项目优先的应用外壳：探索、我的仓库、校园、我的。
+/// 搜索聚焦项目输入框，通知独立打开。首次访问装配页面，随后保留其查询和滚动状态。
 library;
 
 import 'package:campus_mobile/core/app_scope_repository.dart';
@@ -31,10 +7,10 @@ import 'package:campus_mobile/core/app_state.dart';
 import 'package:campus_mobile/core/theme/campus_theme.dart';
 import 'package:campus_mobile/data/models/transaction.dart';
 import 'package:campus_mobile/data/repositories/campus_repository.dart';
-import 'package:campus_mobile/features/apps/apps_page.dart';
-import 'package:campus_mobile/features/home/home_page.dart';
+import 'package:campus_mobile/features/apps/forge_page.dart';
+import 'package:campus_mobile/features/apps/forge_repository.dart';
+import 'package:campus_mobile/features/campus/campus_page.dart';
 import 'package:campus_mobile/features/profile/profile_page.dart';
-import 'package:campus_mobile/features/study/course_hub_page.dart';
 import 'package:campus_mobile/features/shared/widgets/offline_banner.dart';
 import 'package:campus_mobile/features/shared/widgets/workspace_layout.dart';
 import 'package:campus_mobile/features/shell/shell_routes.dart';
@@ -44,7 +20,8 @@ import 'package:flutter/services.dart';
 
 /// 外壳 / the shell.
 class AppShell extends StatefulWidget {
-  const AppShell({super.key});
+  const AppShell({super.key, this.forgeRepository});
+  final ForgeRepository? forgeRepository;
 
   @override
   State<AppShell> createState() => _AppShellState();
@@ -53,7 +30,10 @@ class AppShell extends StatefulWidget {
 class _AppShellState extends State<AppShell>
     with SingleTickerProviderStateMixin {
   int _index = 0;
+  final Set<int> _visited = {0};
   late final AnimationController _transition;
+  final _exploreSearch = FocusNode();
+  final _repositorySearch = FocusNode();
 
   @override
   void initState() {
@@ -68,6 +48,8 @@ class _AppShellState extends State<AppShell>
   @override
   void dispose() {
     _transition.dispose();
+    _exploreSearch.dispose();
+    _repositorySearch.dispose();
     super.dispose();
   }
 
@@ -79,10 +61,27 @@ class _AppShellState extends State<AppShell>
   bool _loadQueued = false;
   int _refreshToken = 0;
   bool _refreshing = false;
+  int _repositoryResetToken = 0;
+
+  void _showCreatedProject() {
+    setState(() => _repositoryResetToken++);
+    _select(1);
+  }
+
+  void _searchProjects() {
+    final mine = _index == 1 && _repositorySearch.context != null;
+    _select(mine ? 1 : 0);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) (mine ? _repositorySearch : _exploreSearch).requestFocus();
+    });
+  }
 
   void _select(int index) {
     if (_index == index) return;
-    setState(() => _index = index);
+    setState(() {
+      _index = index;
+      _visited.add(index);
+    });
     if (MediaQuery.disableAnimationsOf(context)) {
       _transition.value = 1;
     } else {
@@ -132,15 +131,15 @@ class _AppShellState extends State<AppShell>
     final AppLocalizations l10n = AppLocalizations.of(context);
     final bool desktop = MediaQuery.sizeOf(context).width >= 980;
     final labels = [
-      l10n.navHome,
-      l10n.navStore,
-      l10n.navTimetable,
+      l10n.navExplore,
+      l10n.navRepositories,
+      l10n.navCampus,
       l10n.navProfile,
     ];
     const icons = [
-      Icons.dashboard_outlined,
-      Icons.apps_outlined,
-      Icons.school_outlined,
+      Icons.explore_outlined,
+      Icons.source_outlined,
+      Icons.calendar_month_outlined,
       Icons.person_outline,
     ];
     return CallbackShortcuts(
@@ -156,8 +155,8 @@ class _AppShellState extends State<AppShell>
             control: true,
           ): () =>
               _select(i),
-        const SingleActivator(LogicalKeyboardKey.keyK, control: true): () =>
-            openSearch(context),
+        const SingleActivator(LogicalKeyboardKey.keyK, control: true):
+            _searchProjects,
         const SingleActivator(LogicalKeyboardKey.keyR, control: true): _refresh,
       },
       child: Focus(
@@ -198,7 +197,7 @@ class _AppShellState extends State<AppShell>
               _AppBarAction(
                 icon: Icons.search,
                 tooltip: l10n.navSearch,
-                onPressed: () => openSearch(context),
+                onPressed: _searchProjects,
               ),
               const SizedBox(width: 4),
             ],
@@ -271,7 +270,7 @@ class _AppShellState extends State<AppShell>
                               ),
                               const SizedBox(height: 5),
                               Text(
-                                'LEARN · BUILD · CONNECT',
+                                'BUILD · SHARE · CONNECT',
                                 style: TextStyle(
                                   fontSize: 9,
                                   letterSpacing: 1,
@@ -319,17 +318,45 @@ class _AppShellState extends State<AppShell>
                                 ),
                                 index: _index,
                                 children: <Widget>[
-                                  HomePage(
+                                  ForgePage(
+                                    key: const ValueKey('explore-projects'),
                                     active: _index == 0,
+                                    embedded: true,
+                                    repository: widget.forgeRepository,
+                                    showViewSwitcher: false,
+                                    searchFocusNode: _exploreSearch,
+                                    onOpenAccount: () => _select(3),
+                                    onOpenRepositories: _showCreatedProject,
                                     refreshToken: _refreshToken,
-                                    onNavigate: _select,
                                   ),
-                                  AppsPage(refreshToken: _refreshToken),
-                                  CourseHubPage(
-                                    active: _index == 2,
-                                    refreshToken: _refreshToken,
-                                  ),
-                                  const ProfilePage(),
+                                  if (_visited.contains(1))
+                                    ForgePage(
+                                      key: const ValueKey('my-repositories'),
+                                      resetSearchToken: _repositoryResetToken,
+                                      active: _index == 1,
+                                      embedded: true,
+                                      initialMine: true,
+                                      repository: widget.forgeRepository,
+                                      showViewSwitcher: false,
+                                      searchFocusNode: _repositorySearch,
+                                      onOpenAccount: () => _select(3),
+                                      refreshToken: _refreshToken,
+                                    )
+                                  else
+                                    const SizedBox.shrink(),
+                                  if (_visited.contains(2))
+                                    CampusPage(
+                                      active: _index == 2,
+                                      refreshToken: _refreshToken,
+                                    )
+                                  else
+                                    const SizedBox.shrink(),
+                                  if (_visited.contains(3))
+                                    ProfilePage(
+                                      onOpenRepositories: () => _select(1),
+                                    )
+                                  else
+                                    const SizedBox.shrink(),
                                 ],
                               ),
                             ),
@@ -349,19 +376,19 @@ class _AppShellState extends State<AppShell>
                   onDestinationSelected: _select,
                   destinations: <NavigationDestination>[
                     NavigationDestination(
-                      icon: const Icon(Icons.home_outlined),
-                      selectedIcon: const Icon(Icons.home),
-                      label: l10n.navHome,
+                      icon: const Icon(Icons.explore_outlined),
+                      selectedIcon: const Icon(Icons.explore),
+                      label: l10n.navExplore,
                     ),
                     NavigationDestination(
-                      icon: const Icon(Icons.apps_outlined),
-                      selectedIcon: const Icon(Icons.apps),
-                      label: l10n.navStore,
+                      icon: const Icon(Icons.source_outlined),
+                      selectedIcon: const Icon(Icons.source),
+                      label: l10n.navRepositories,
                     ),
                     NavigationDestination(
-                      icon: const Icon(Icons.school_outlined),
-                      selectedIcon: const Icon(Icons.school),
-                      label: l10n.navTimetable,
+                      icon: const Icon(Icons.calendar_month_outlined),
+                      selectedIcon: const Icon(Icons.calendar_month),
+                      label: l10n.navCampus,
                     ),
                     NavigationDestination(
                       icon: const Icon(Icons.person_outline),
@@ -379,15 +406,11 @@ class _AppShellState extends State<AppShell>
   String _title(AppLocalizations l10n) {
     switch (_index) {
       case 0:
-        return l10n.appTitle;
+        return l10n.navExplore;
       case 1:
-        // 「应用」Tab 现在装的是校园服务入口（分三组），学生应用只是它的一个推入页，
-        // 因此标题不能再用 `storeTitle`。
-        // The Apps tab now holds the grouped campus entries, with the student-app store as a
-        // pushed page, so its title can no longer be `storeTitle`.
-        return l10n.appsTitle;
+        return l10n.navRepositories;
       case 2:
-        return l10n.navTimetable;
+        return l10n.navCampus;
       default:
         return l10n.profileTitle;
     }

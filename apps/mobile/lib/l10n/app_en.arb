@@ -1,9 +1,12 @@
 {
   "@@locale": "en",
   "appTitle": "Campulse",
-  "appTagline": "Campulse digital workbench",
+  "appTagline": "Campus code-sharing community",
 
   "navHome": "Home",
+  "navExplore": "Explore",
+  "navRepositories": "Repositories",
+  "navCampus": "Campus",
   "navSearch": "Search",
   "navInbox": "Inbox",
   "navStore": "Store",
@@ -115,6 +118,7 @@
   "courseTeacherLabel": "Teacher",
   "courseWeeksLabel": "Teaching weeks",
   "courseWeeksRange": "Weeks {start}–{end}",
+  "@courseWeeksRange": { "description": "Teaching week range", "placeholders": { "start": { "type": "int" }, "end": { "type": "int" } } },
 
   "appsTitle": "Apps",
   "appsQuickAccess": "Quick access",
