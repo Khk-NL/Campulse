@@ -24,6 +24,12 @@
 
 对标用于确定这一轮的产品范围，代码、浏览器操作与发布结果分别见[验收记录](ACCEPTANCE.md)。GithubStarsManager 本轮用于参考收藏筛选组织；其分类、语义检索和 Release 时间线可在真实使用反馈后评估。源码引入与许可另见[开源使用](OPEN_SOURCE_USAGE.md)。
 
+### GithubStarsManager 的具体借鉴
+
+已核对其[分类侧栏](https://github.com/AmintaCCCP/GithubStarsManager/blob/main/src/components/CategorySidebar.tsx)、[检索与排序](https://github.com/AmintaCCCP/GithubStarsManager/blob/main/src/utils/repoSearch.ts)及[外部仓库合并](https://github.com/AmintaCCCP/GithubStarsManager/blob/main/src/features/repositories/hooks/useSearchActions.ts)。本轮采用组合查询与稳定分页的思路，Campulse 的条件和排序仍由 PocketBase 执行。
+
+下一步给“我的 Star”增加个人分类与真实计数，分类栏可收起，个人标签和备注独立于作者的公开话题。接入 GitHub 元数据时只刷新名称、描述、语言和来源时间，保留用户自己的分类、标签与备注。版本订阅按独立的通知关系实现，Star 继续承担收藏。对应功能随各自版本验收后登记。
+
 ## 色彩与标识
 
 默认主色 `#A41F35`，深色变体 `#8F1028`，来源参考华东师范大学[标准色使用规范](https://www.ecnu.edu.cn/wzcd/xxgk/xxbs/bsxz/jcbf/bzssygf.htm)。金黄和蓝紫用于辅助分区与交互状态；大面积内容采用浅底。
