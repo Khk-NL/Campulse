@@ -5,6 +5,7 @@ import 'package:pocketbase/pocketbase.dart';
 import 'package:campus_mobile/core/pocketbase_session.dart';
 
 import 'forge_repository.dart';
+import 'forge_markdown.dart';
 import '../shared/widgets/workspace_layout.dart';
 import '../../core/launcher/external_opener.dart';
 
@@ -45,6 +46,9 @@ class _ForgePageState extends State<ForgePage> {
 
   late bool mine = widget.initialMine;
   String query = '';
+  String sort = 'updated';
+  bool starred = false;
+  String? topicSearch;
   int page = 1;
   Future<ResultList<RecordModel>>? result;
   final searchController = TextEditingController();
@@ -58,7 +62,13 @@ class _ForgePageState extends State<ForgePage> {
   void load() {
     result = mine && (repo?.userId.isEmpty ?? true)
         ? null
-        : repo?.projects(page: page, query: query, mine: mine);
+        : repo?.projects(
+            page: page,
+            query: query,
+            mine: mine,
+            sort: sort,
+            starred: starred,
+          );
   }
 
   @override
@@ -68,6 +78,9 @@ class _ForgePageState extends State<ForgePage> {
       searchDebounce?.cancel();
       searchController.clear();
       query = '';
+      topicSearch = null;
+      starred = false;
+      sort = 'updated';
       page = 1;
     }
     if (widget.refreshToken != oldWidget.refreshToken ||
@@ -77,12 +90,36 @@ class _ForgePageState extends State<ForgePage> {
     }
   }
 
-  void search(String value) {
+  void search(String value, {bool fromTopic = false}) {
     searchDebounce?.cancel();
     final next = value.trim();
-    if (next == query) return;
+    final nextTopic = fromTopic ? next : null;
+    if (next == query && nextTopic == topicSearch) return;
     setState(() {
       query = next;
+      topicSearch = nextTopic;
+      page = 1;
+      load();
+    });
+  }
+
+  void _filter({String? order, bool? onlyStarred}) {
+    searchDebounce?.cancel();
+    final nextQuery = searchController.text.trim();
+    final nextTopic = topicSearch == nextQuery ? topicSearch : null;
+    final nextSort = order ?? sort;
+    final nextStarred = onlyStarred ?? starred;
+    if (nextQuery == query &&
+        nextTopic == topicSearch &&
+        nextSort == sort &&
+        nextStarred == starred) {
+      return;
+    }
+    setState(() {
+      query = nextQuery;
+      topicSearch = nextTopic;
+      sort = nextSort;
+      starred = nextStarred;
       page = 1;
       load();
     });
@@ -107,7 +144,13 @@ class _ForgePageState extends State<ForgePage> {
         widget.onOpenRepositories!();
         return;
       }
+      searchDebounce?.cancel();
+      searchController.clear();
       setState(() {
+        query = '';
+        topicSearch = null;
+        starred = false;
+        sort = 'updated';
         page = 1;
         load();
       });
@@ -142,184 +185,293 @@ class _ForgePageState extends State<ForgePage> {
         ? _guestRepositories()
         : repo == null
         ? const Center(child: Text('连接校园服务后参与项目交流'))
-        : Column(
-            children: [
-              Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        if (widget.showViewSwitcher)
-                          Expanded(
-                            child: SegmentedButton<bool>(
-                              showSelectedIcon: false,
-                              segments: const [
-                                ButtonSegment(
-                                  value: false,
-                                  label: Text('发现项目'),
-                                  icon: Icon(Icons.explore_outlined),
-                                ),
-                                ButtonSegment(
-                                  value: true,
-                                  label: Text('我的仓库'),
-                                  icon: Icon(Icons.folder_open),
-                                ),
-                              ],
-                              selected: {mine},
-                              onSelectionChanged: (value) => setState(() {
-                                searchDebounce?.cancel();
-                                query = searchController.text.trim();
-                                mine = value.first;
-                                page = 1;
-                                load();
-                              }),
-                            ),
-                          ),
-                        if (widget.showViewSwitcher)
-                          const SizedBox(width: 12)
-                        else
-                          const Spacer(),
-                        FilledButton.icon(
-                          onPressed:
-                              repo!.canWrite || widget.onOpenAccount != null
-                              ? _createProject
-                              : null,
-                          icon: const Icon(Icons.add),
-                          label: Text(mine ? '创建项目' : '发布项目'),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                    TextField(
-                      controller: searchController,
-                      focusNode: widget.searchFocusNode,
-                      textInputAction: TextInputAction.search,
-                      decoration: InputDecoration(
-                        prefixIcon: const Icon(Icons.search),
-                        hintText: '搜索项目、介绍或技术话题',
-                        labelText: mine ? '搜索我的仓库' : '搜索项目',
-                        suffixIcon: IconButton(
-                          tooltip: '清空搜索',
-                          icon: const Icon(Icons.clear),
-                          onPressed: () {
-                            searchController.clear();
-                            search('');
-                          },
-                        ),
-                      ),
-                      onChanged: (value) {
-                        searchDebounce?.cancel();
-                        searchDebounce = Timer(
-                          const Duration(milliseconds: 300),
-                          () => search(value),
-                        );
-                      },
-                      onSubmitted: search,
-                    ),
-                  ],
-                ),
-              ),
-              Expanded(
-                child: FutureBuilder<ResultList<RecordModel>>(
-                  future: result,
-                  builder: (context, snapshot) {
-                    if (snapshot.hasError) {
-                      return _Retry(onRetry: () => setState(load));
-                    }
-                    if (!snapshot.hasData) {
-                      return const Center(child: CircularProgressIndicator());
-                    }
-                    final rows = snapshot.data!;
-                    return RefreshIndicator(
-                      onRefresh: () async {
-                        setState(load);
-                        await result;
-                      },
-                      child: ListView(
-                        padding: const EdgeInsets.symmetric(horizontal: 16),
+        : LayoutBuilder(
+            builder: (context, viewport) => Column(
+              children: [
+                ConstrainedBox(
+                  constraints: BoxConstraints(
+                    maxHeight: viewport.maxHeight * .6,
+                  ),
+                  child: SingleChildScrollView(
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          WorkspaceBanner(
-                            vivid: true,
-                            eyebrow: 'CAMPUS CODE COMMUNITY',
-                            title: mine ? '从想法到作品' : '一起构建校园',
-                            subtitle: mine
-                                ? '管理自己的项目，提交审核，记录迭代。'
-                                : '找到同学的代码与工具，围绕项目交流，一起解决校园里的问题。',
-                            icon: mine
-                                ? Icons.inventory_2_outlined
-                                : Icons.forum_outlined,
+                          Row(
+                            children: [
+                              if (widget.showViewSwitcher)
+                                Expanded(
+                                  child: SegmentedButton<bool>(
+                                    showSelectedIcon: false,
+                                    segments: const [
+                                      ButtonSegment(
+                                        value: false,
+                                        label: Text('发现项目'),
+                                        icon: Icon(Icons.explore_outlined),
+                                      ),
+                                      ButtonSegment(
+                                        value: true,
+                                        label: Text('我的仓库'),
+                                        icon: Icon(Icons.folder_open),
+                                      ),
+                                    ],
+                                    selected: {mine},
+                                    onSelectionChanged: (value) => setState(() {
+                                      searchDebounce?.cancel();
+                                      query = searchController.text.trim();
+                                      mine = value.first;
+                                      starred = false;
+                                      page = 1;
+                                      load();
+                                    }),
+                                  ),
+                                ),
+                              if (widget.showViewSwitcher)
+                                const SizedBox(width: 12)
+                              else
+                                const Spacer(),
+                              FilledButton.icon(
+                                onPressed:
+                                    repo!.canWrite ||
+                                        widget.onOpenAccount != null
+                                    ? _createProject
+                                    : null,
+                                icon: const Icon(Icons.add),
+                                label: Text(mine ? '创建项目' : '发布项目'),
+                              ),
+                            ],
                           ),
-                          const SizedBox(height: 16),
-                          Text(
-                            '${rows.totalItems} 个项目',
-                            style: Theme.of(context).textTheme.labelLarge,
-                          ),
-                          const SizedBox(height: 8),
-                          if (rows.items.isEmpty)
-                            Padding(
-                              padding: const EdgeInsets.symmetric(vertical: 36),
-                              child: Column(
-                                children: [
-                                  Icon(
-                                    query.isEmpty
-                                        ? Icons.terminal
-                                        : Icons.search,
-                                    size: 44,
-                                    color: Theme.of(context)
-                                        .colorScheme
-                                        .tertiary,
-                                  ),
-                                  const SizedBox(height: 14),
-                                  Text(
-                                    query.isNotEmpty
-                                        ? '换个项目名或技术话题试试'
-                                        : mine
-                                        ? '把你的第一个项目放到这里'
-                                        : '从一个校园需求开始',
-                                    style: Theme.of(context)
-                                        .textTheme
-                                        .titleMedium,
-                                  ),
-                                  const SizedBox(height: 8),
-                                  Text(
-                                    query.isNotEmpty
-                                        ? '搜索项目名称、介绍和技术话题。'
-                                        : mine
-                                        ? '添加源码链接和介绍，准备好后提交审核。'
-                                        : '上架后的作品会出现在这里，也欢迎分享你正在做的工具。',
-                                    textAlign: TextAlign.center,
-                                  ),
-                                  if (query.isEmpty &&
-                                      (repo!.canWrite ||
-                                          widget.onOpenAccount != null)) ...[
-                                    const SizedBox(height: 16),
-                                    OutlinedButton.icon(
-                                      onPressed: _createProject,
-                                      icon: const Icon(Icons.add),
-                                      label: Text(mine ? '创建项目' : '分享我的项目'),
-                                    ),
-                                  ],
-                                ],
+                          const SizedBox(height: 12),
+                          TextField(
+                            controller: searchController,
+                            focusNode: widget.searchFocusNode,
+                            textInputAction: TextInputAction.search,
+                            decoration: InputDecoration(
+                              prefixIcon: const Icon(Icons.search),
+                              hintText: '搜索项目、介绍或技术话题',
+                              labelText: mine ? '搜索我的仓库' : '搜索项目',
+                              suffixIcon: IconButton(
+                                tooltip: '清空搜索',
+                                icon: const Icon(Icons.clear),
+                                onPressed: () {
+                                  searchController.clear();
+                                  search('');
+                                },
                               ),
                             ),
-                          for (final item in rows.items) _repositoryCard(item),
-                          _Pager(
-                            page: page,
-                            total: rows.totalPages,
-                            onPage: (value) => setState(() {
-                              page = value;
-                              load();
-                            }),
+                            onChanged: (value) {
+                              searchDebounce?.cancel();
+                              searchDebounce = Timer(
+                                const Duration(milliseconds: 300),
+                                () => search(value),
+                              );
+                            },
+                            onSubmitted: search,
+                          ),
+                          const SizedBox(height: 10),
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 8,
+                            crossAxisAlignment: WrapCrossAlignment.center,
+                            children: [
+                              if (!mine) ...[
+                                ChoiceChip(
+                                  showCheckmark: false,
+                                  avatar: const Icon(
+                                    Icons.explore_outlined,
+                                    size: 18,
+                                  ),
+                                  label: const Text('全部项目'),
+                                  selected: !starred,
+                                  onSelected: (_) =>
+                                      _filter(onlyStarred: false),
+                                ),
+                                ChoiceChip(
+                                  showCheckmark: false,
+                                  avatar: const Icon(
+                                    Icons.star_outline,
+                                    size: 18,
+                                  ),
+                                  label: const Text('我的 Star'),
+                                  selected: starred,
+                                  onSelected: (_) => _filter(onlyStarred: true),
+                                ),
+                              ],
+                              PopupMenuButton<String>(
+                                tooltip: '项目排序',
+                                initialValue: sort,
+                                onSelected: (value) => _filter(order: value),
+                                itemBuilder: (_) => const [
+                                  PopupMenuItem(
+                                    value: 'updated',
+                                    child: Text('最近更新'),
+                                  ),
+                                  PopupMenuItem(
+                                    value: 'created',
+                                    child: Text('最新发布'),
+                                  ),
+                                  PopupMenuItem(
+                                    value: 'name',
+                                    child: Text('名称排序'),
+                                  ),
+                                ],
+                                child: Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 10,
+                                    vertical: 8,
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      const Icon(Icons.sort, size: 18),
+                                      const SizedBox(width: 6),
+                                      Text(switch (sort) {
+                                        'created' => '最新发布',
+                                        'name' => '名称排序',
+                                        _ => '最近更新',
+                                      }),
+                                      const Icon(Icons.expand_more, size: 18),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                              if (topicSearch != null)
+                                InputChip(
+                                  label: Text('话题搜索：$topicSearch'),
+                                  onDeleted: () {
+                                    searchController.clear();
+                                    search('');
+                                  },
+                                ),
+                            ],
                           ),
                         ],
                       ),
-                    );
-                  },
+                    ),
+                  ),
                 ),
-              ),
-            ],
+                Expanded(
+                  child: FutureBuilder<ResultList<RecordModel>>(
+                    future: result,
+                    builder: (context, snapshot) {
+                      if (snapshot.hasError) {
+                        return _Retry(onRetry: () => setState(load));
+                      }
+                      if (!snapshot.hasData) {
+                        return const Center(child: CircularProgressIndicator());
+                      }
+                      final rows = snapshot.data!;
+                      return RefreshIndicator(
+                        onRefresh: () async {
+                          setState(load);
+                          await result;
+                        },
+                        child: ListView(
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          children: [
+                            WorkspaceBanner(
+                              vivid: true,
+                              eyebrow: 'CAMPUS CODE COMMUNITY',
+                              title: mine ? '从想法到作品' : '一起构建校园',
+                              subtitle: mine
+                                  ? '管理自己的项目，提交审核，记录迭代。'
+                                  : '找到同学的代码与工具，围绕项目交流，一起解决校园里的问题。',
+                              icon: mine
+                                  ? Icons.inventory_2_outlined
+                                  : Icons.forum_outlined,
+                            ),
+                            const SizedBox(height: 16),
+                            Text(
+                              '${rows.totalItems} 个项目',
+                              style: Theme.of(context).textTheme.labelLarge,
+                            ),
+                            const SizedBox(height: 8),
+                            if (rows.items.isEmpty)
+                              Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 36,
+                                ),
+                                child: Column(
+                                  children: [
+                                    Icon(
+                                      query.isEmpty
+                                          ? Icons.terminal
+                                          : Icons.search,
+                                      size: 44,
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .tertiary,
+                                    ),
+                                    const SizedBox(height: 14),
+                                    Text(
+                                      starred && repo!.userId.isEmpty
+                                          ? '登录查看收藏的项目'
+                                          : query.isNotEmpty
+                                          ? '换个项目名或技术话题试试'
+                                          : starred
+                                          ? '把感兴趣的项目留在这里'
+                                          : mine
+                                          ? '把你的第一个项目放到这里'
+                                          : '从一个校园需求开始',
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .titleMedium,
+                                    ),
+                                    const SizedBox(height: 8),
+                                    Text(
+                                      starred && repo!.userId.isEmpty
+                                          ? '使用 Campulse 账号，在手机和电脑间整理 Star 项目。'
+                                          : query.isNotEmpty
+                                          ? '搜索项目名称、介绍和技术话题。'
+                                          : starred
+                                          ? '在项目详情点亮 Star，之后从这里继续阅读和交流。'
+                                          : mine
+                                          ? '添加源码链接和介绍，准备好后提交审核。'
+                                          : '上架后的作品会出现在这里，也欢迎分享你正在做的工具。',
+                                      textAlign: TextAlign.center,
+                                    ),
+                                    if (starred &&
+                                        repo!.userId.isEmpty &&
+                                        widget.onOpenAccount != null) ...[
+                                      const SizedBox(height: 16),
+                                      FilledButton.icon(
+                                        onPressed: widget.onOpenAccount,
+                                        icon: const Icon(Icons.login),
+                                        label: const Text('登录账号'),
+                                      ),
+                                    ] else if (!starred &&
+                                        query.isEmpty &&
+                                        (repo!.canWrite ||
+                                            widget.onOpenAccount != null)) ...[
+                                      const SizedBox(height: 16),
+                                      OutlinedButton.icon(
+                                        onPressed: _createProject,
+                                        icon: const Icon(Icons.add),
+                                        label: Text(mine ? '创建项目' : '分享我的项目'),
+                                      ),
+                                    ],
+                                  ],
+                                ),
+                              ),
+                            for (final item in rows.items)
+                              _repositoryCard(item),
+                            _Pager(
+                              page: page,
+                              total: rows.totalPages,
+                              onPage: (value) => setState(() {
+                                page = value;
+                                load();
+                              }),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ],
+            ),
           ),
   );
 
@@ -343,7 +495,12 @@ class _ForgePageState extends State<ForgePage> {
                 builder: (_) => ForgeProjectPage(repo: repo!, id: item.id),
               ),
             );
-            if (mounted) setState(load);
+            if (mounted) {
+              setState(() {
+                page = 1;
+                load();
+              });
+            }
           },
           child: Padding(
             padding: const EdgeInsets.all(20),
@@ -394,7 +551,7 @@ class _ForgePageState extends State<ForgePage> {
                           label: Text(topic),
                           onPressed: () {
                             searchController.text = topic;
-                            search(topic);
+                            search(topic, fromTopic: true);
                           },
                         ),
                     ],
@@ -433,6 +590,11 @@ class _ForgePageState extends State<ForgePage> {
                         color: theme.colorScheme.onSurfaceVariant,
                       ),
                     ),
+                    if (_recordDate(context, item).isNotEmpty)
+                      Text(
+                        '更新于 ${_recordDate(context, item)}',
+                        style: theme.textTheme.labelSmall,
+                      ),
                   ],
                 ),
               ],
@@ -460,8 +622,13 @@ class _ForgeProjectPageState extends State<ForgeProjectPage> {
   bool starReady = false;
   bool starring = false;
   bool submitting = false;
+  int starRevision = 0;
   int page = 1;
   String? discussionStatus;
+  String? discussionKind;
+  String discussionQuery = '';
+  final discussionSearch = TextEditingController();
+  Timer? discussionDebounce;
   @override
   void initState() {
     super.initState();
@@ -469,14 +636,19 @@ class _ForgeProjectPageState extends State<ForgeProjectPage> {
   }
 
   void load() {
-    starReady = false;
     project = widget.repo.project(widget.id);
     discussions = fetchDiscussions();
+    _loadStars();
+  }
+
+  void _loadStars() {
+    final revision = ++starRevision;
+    starReady = false;
     stars = widget.repo.stars(widget.id);
     widget.repo
         .myStar(widget.id)
         .then((value) {
-          if (mounted) {
+          if (mounted && revision == starRevision) {
             setState(() {
               star = value;
               starReady = true;
@@ -484,12 +656,147 @@ class _ForgeProjectPageState extends State<ForgeProjectPage> {
           }
         })
         .catchError((Object error) {
-          if (mounted) _message(context, '关注状态加载失败，请刷新重试');
+          if (mounted && revision == starRevision) {
+            _message(context, 'Star 状态加载失败，请刷新重试');
+          }
         });
   }
 
-  Future<ResultList<RecordModel>> fetchDiscussions() =>
-      widget.repo.discussions(widget.id, page: page, status: discussionStatus);
+  Future<ResultList<RecordModel>> fetchDiscussions() => widget.repo.discussions(
+    widget.id,
+    page: page,
+    status: discussionStatus,
+    kind: discussionKind,
+    query: discussionQuery,
+  );
+
+  void _filterDiscussions({
+    String? status,
+    String? kind,
+    bool changeStatus = false,
+    bool changeKind = false,
+  }) {
+    discussionDebounce?.cancel();
+    final nextQuery = discussionSearch.text.trim();
+    final nextStatus = changeStatus ? status : discussionStatus;
+    final nextKind = changeKind ? kind : discussionKind;
+    if (nextQuery == discussionQuery &&
+        nextStatus == discussionStatus &&
+        nextKind == discussionKind) {
+      return;
+    }
+    setState(() {
+      discussionQuery = nextQuery;
+      discussionStatus = nextStatus;
+      discussionKind = nextKind;
+      page = 1;
+      discussions = fetchDiscussions();
+    });
+  }
+
+  @override
+  void dispose() {
+    discussionDebounce?.cancel();
+    discussionSearch.dispose();
+    super.dispose();
+  }
+
+  Widget _discussionFilters() => Padding(
+    padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+    child: Column(
+      children: [
+        TextField(
+          controller: discussionSearch,
+          textInputAction: TextInputAction.search,
+          decoration: InputDecoration(
+            labelText: '搜索讨论',
+            hintText: '搜索标题与正文',
+            prefixIcon: const Icon(Icons.search),
+            suffixIcon: IconButton(
+              tooltip: '清空讨论搜索',
+              onPressed: () {
+                discussionSearch.clear();
+                _filterDiscussions();
+              },
+              icon: const Icon(Icons.clear),
+            ),
+          ),
+          onChanged: (_) {
+            discussionDebounce?.cancel();
+            discussionDebounce = Timer(
+              const Duration(milliseconds: 300),
+              () => _filterDiscussions(),
+            );
+          },
+          onSubmitted: (_) => _filterDiscussions(),
+        ),
+        const SizedBox(height: 8),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          crossAxisAlignment: WrapCrossAlignment.center,
+          children: [
+            for (final status in <String?>[null, 'open', 'closed'])
+              ChoiceChip(
+                showCheckmark: false,
+                label: Text(switch (status) {
+                  'open' => '讨论中',
+                  'closed' => '已解决',
+                  _ => '全部讨论',
+                }),
+                selected: discussionStatus == status,
+                onSelected: (_) =>
+                    _filterDiscussions(status: status, changeStatus: true),
+              ),
+            SizedBox(
+              width: 150,
+              child: DropdownButtonFormField<String>(
+                key: ValueKey(discussionKind),
+                initialValue: discussionKind ?? '',
+                decoration: const InputDecoration(
+                  labelText: '讨论类型',
+                  isDense: true,
+                ),
+                items: [
+                  const DropdownMenuItem(value: '', child: Text('全部类型')),
+                  for (final kind in ['question', 'idea', 'bug', 'update'])
+                    DropdownMenuItem(value: kind, child: Text(_kind(kind))),
+                ],
+                onChanged: (value) => _filterDiscussions(
+                  kind: value == '' ? null : value,
+                  changeKind: true,
+                ),
+              ),
+            ),
+            FilledButton.icon(
+              onPressed: widget.repo.canWrite
+                  ? () async {
+                      final created = await _newDiscussion(
+                        context,
+                        widget.repo,
+                        widget.id,
+                      );
+                      if (created && mounted) {
+                        discussionSearch.clear();
+                        discussionDebounce?.cancel();
+                        setState(() {
+                          page = 1;
+                          discussionQuery = '';
+                          discussionStatus = null;
+                          discussionKind = null;
+                          discussions = fetchDiscussions();
+                        });
+                      }
+                    }
+                  : null,
+              icon: const Icon(Icons.add_comment_outlined),
+              label: const Text('发起讨论'),
+            ),
+          ],
+        ),
+      ],
+    ),
+  );
 
   @override
   Widget build(BuildContext context) => Scaffold(
@@ -505,267 +812,316 @@ class _ForgeProjectPageState extends State<ForgeProjectPage> {
         final owned = item.getStringValue('owner') == widget.repo.userId;
         return DefaultTabController(
           length: 2,
-          child: Column(
-            children: [
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      item.getStringValue('name'),
-                      style: Theme.of(context).textTheme.headlineSmall,
-                    ),
-                    Text(item.getStringValue('summary')),
-                    if (owned) ...[
-                      Text(_reviewLabel(item)),
-                      if (item.getStringValue('reviewNote').isNotEmpty)
-                        Text(item.getStringValue('reviewNote')),
-                    ],
-                    const SizedBox(height: 8),
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
-                      children: [
-                        if (owned &&
-                            item.getStringValue('reviewState') != 'approved')
-                          FilledButton.icon(
-                            onPressed:
-                                submitting ||
+          child: LayoutBuilder(
+            builder: (context, viewport) => Column(
+              children: [
+                ConstrainedBox(
+                  constraints: BoxConstraints(
+                    maxHeight: viewport.maxHeight * .42,
+                  ),
+                  child: SingleChildScrollView(
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            item.getStringValue('name'),
+                            style: Theme.of(context).textTheme.headlineSmall,
+                          ),
+                          Text(item.getStringValue('summary')),
+                          if (owned) ...[
+                            Text(_reviewLabel(item)),
+                            if (item.getStringValue('reviewNote').isNotEmpty)
+                              Text(item.getStringValue('reviewNote')),
+                          ],
+                          const SizedBox(height: 8),
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 8,
+                            children: [
+                              if (owned &&
+                                  item.getStringValue('reviewState') !=
+                                      'approved')
+                                FilledButton.icon(
+                                  onPressed:
+                                      submitting ||
+                                          item.getStringValue('reviewState') ==
+                                              'pending'
+                                      ? null
+                                      : () async {
+                                          setState(() => submitting = true);
+                                          try {
+                                            await widget.repo.submitProject(
+                                              widget.id,
+                                            );
+                                            if (mounted) {
+                                              setState(load);
+                                            }
+                                            if (context.mounted) {
+                                              _message(context, '项目已提交审核');
+                                            }
+                                          } catch (error) {
+                                            if (context.mounted) {
+                                              _message(
+                                                context,
+                                                error is StateError
+                                                    ? error.message.toString()
+                                                    : '提交失败，请重试',
+                                              );
+                                            }
+                                          } finally {
+                                            if (mounted) {
+                                              setState(
+                                                () => submitting = false,
+                                              );
+                                            }
+                                          }
+                                        },
+                                  icon: const Icon(Icons.fact_check_outlined),
+                                  label: Text(
                                     item.getStringValue('reviewState') ==
-                                        'pending'
-                                ? null
-                                : () async {
-                                    setState(() => submitting = true);
-                                    try {
-                                      await widget.repo.submitProject(
-                                        widget.id,
-                                      );
-                                      if (mounted) {
-                                        setState(load);
-                                      }
-                                      if (context.mounted) {
-                                        _message(context, '项目已提交审核');
-                                      }
-                                    } catch (error) {
-                                      if (context.mounted) {
-                                        _message(
-                                          context,
-                                          error is StateError
-                                              ? error.message.toString()
-                                              : '提交失败，请重试',
-                                        );
-                                      }
-                                    } finally {
-                                      if (mounted) {
-                                        setState(() => submitting = false);
-                                      }
+                                            'pending'
+                                        ? '审核中'
+                                        : '提交审核',
+                                  ),
+                                ),
+                              if (item
+                                  .getStringValue('repositoryUrl')
+                                  .isNotEmpty)
+                                OutlinedButton.icon(
+                                  onPressed: () async {
+                                    final uri = Uri.tryParse(
+                                      item.getStringValue('repositoryUrl'),
+                                    );
+                                    final ok =
+                                        uri != null &&
+                                        uri.scheme == 'https' &&
+                                        uri.host == 'github.com' &&
+                                        await openUrlExternally(uri);
+                                    if (!ok && context.mounted) {
+                                      _message(context, '链接打开失败，请重试');
                                     }
                                   },
-                            icon: const Icon(Icons.fact_check_outlined),
-                            label: Text(
-                              item.getStringValue('reviewState') == 'pending'
-                                  ? '审核中'
-                                  : '提交审核',
-                            ),
+                                  icon: const Icon(Icons.open_in_new),
+                                  label: const Text('GitHub 仓库'),
+                                ),
+                              FutureBuilder<ResultList<RecordModel>>(
+                                future: stars,
+                                builder: (context, count) =>
+                                    OutlinedButton.icon(
+                                      onPressed:
+                                          widget.repo.canWrite &&
+                                              !starring &&
+                                              starReady
+                                          ? () async {
+                                              setState(() => starring = true);
+                                              try {
+                                                await widget.repo.toggleStar(
+                                                  widget.id,
+                                                );
+                                                if (mounted) {
+                                                  setState(_loadStars);
+                                                }
+                                              } catch (error) {
+                                                if (context.mounted) {
+                                                  _message(
+                                                    context,
+                                                    'Star 操作失败，请重试',
+                                                  );
+                                                }
+                                              } finally {
+                                                if (mounted) {
+                                                  setState(
+                                                    () => starring = false,
+                                                  );
+                                                }
+                                              }
+                                            }
+                                          : null,
+                                      icon: Icon(
+                                        star == null
+                                            ? Icons.star_outline
+                                            : Icons.star,
+                                      ),
+                                      label: Text(
+                                        'Star ${count.data?.totalItems ?? '…'}',
+                                      ),
+                                    ),
+                              ),
+                              if (!starReady && widget.repo.canWrite)
+                                TextButton.icon(
+                                  onPressed: () => setState(_loadStars),
+                                  icon: const Icon(Icons.refresh),
+                                  label: const Text('刷新 Star 状态'),
+                                ),
+                              if (owned)
+                                OutlinedButton.icon(
+                                  onPressed: () async {
+                                    final saved = await showProjectEditor(
+                                      context,
+                                      widget.repo,
+                                      initial: item,
+                                    );
+                                    if (saved && mounted) setState(load);
+                                  },
+                                  icon: const Icon(Icons.edit_outlined),
+                                  label: const Text('编辑项目'),
+                                ),
+                            ],
                           ),
-                        if (item.getStringValue('repositoryUrl').isNotEmpty)
-                          OutlinedButton.icon(
-                            onPressed: () async {
-                              final uri = Uri.tryParse(
-                                item.getStringValue('repositoryUrl'),
-                              );
-                              final ok =
-                                  uri != null &&
-                                  uri.scheme == 'https' &&
-                                  uri.host == 'github.com' &&
-                                  await openUrlExternally(uri);
-                              if (!ok && context.mounted) {
-                                _message(context, '链接打开失败，请重试');
-                              }
-                            },
-                            icon: const Icon(Icons.open_in_new),
-                            label: const Text('GitHub 仓库'),
-                          ),
-                        FutureBuilder<ResultList<RecordModel>>(
-                          future: stars,
-                          builder: (context, count) => OutlinedButton.icon(
-                            onPressed:
-                                widget.repo.canWrite && !starring && starReady
-                                ? () async {
-                                    setState(() => starring = true);
-                                    try {
-                                      await widget.repo.toggleStar(widget.id);
-                                      if (mounted) setState(load);
-                                    } catch (error) {
-                                      if (context.mounted) {
-                                        _message(context, '关注操作失败，请重试');
-                                      }
-                                    } finally {
-                                      if (mounted) {
-                                        setState(() => starring = false);
-                                      }
-                                    }
-                                  }
-                                : null,
-                            icon: Icon(
-                              star == null ? Icons.star_outline : Icons.star,
-                            ),
-                            label: Text('关注 ${count.data?.totalItems ?? '…'}'),
-                          ),
-                        ),
-                        if (!starReady && widget.repo.canWrite)
-                          TextButton.icon(
-                            onPressed: () => setState(load),
-                            icon: const Icon(Icons.refresh),
-                            label: const Text('刷新关注状态'),
-                          ),
-                        if (owned)
-                          OutlinedButton.icon(
-                            onPressed: () async {
-                              final saved = await showProjectEditor(
-                                context,
-                                widget.repo,
-                                initial: item,
-                              );
-                              if (saved && mounted) setState(load);
-                            },
-                            icon: const Icon(Icons.edit_outlined),
-                            label: const Text('编辑项目'),
-                          ),
-                      ],
+                        ],
+                      ),
                     ),
+                  ),
+                ),
+                const TabBar(
+                  tabs: [
+                    Tab(text: 'README'),
+                    Tab(text: '讨论与问题'),
                   ],
                 ),
-              ),
-              const TabBar(
-                tabs: [
-                  Tab(text: 'README'),
-                  Tab(text: '讨论与问题'),
-                ],
-              ),
-              Expanded(
-                child: TabBarView(
-                  children: [
-                    SingleChildScrollView(
-                      padding: const EdgeInsets.all(20),
-                      child: SelectionArea(
-                        child: Text(
-                          item.getStringValue('readme').isEmpty
+                Expanded(
+                  child: TabBarView(
+                    children: [
+                      SingleChildScrollView(
+                        padding: const EdgeInsets.all(20),
+                        child: ForgeMarkdown(
+                          data: item.getStringValue('readme').isEmpty
                               ? '写下项目目标、使用方法和参与方式。'
                               : item.getStringValue('readme'),
                         ),
                       ),
-                    ),
-                    FutureBuilder<ResultList<RecordModel>>(
-                      future: discussions,
-                      builder: (context, threads) {
-                        if (threads.hasError) {
-                          return _Retry(onRetry: () => setState(load));
-                        }
-                        if (!threads.hasData) {
-                          return const Center(
-                            child: CircularProgressIndicator(),
-                          );
-                        }
-                        return ListView(
-                          padding: const EdgeInsets.all(16),
+                      LayoutBuilder(
+                        builder: (context, area) => Column(
                           children: [
-                            Wrap(
-                              spacing: 8,
-                              children: [
-                                for (final status in <String?>[
-                                  null,
-                                  'open',
-                                  'closed',
-                                ])
-                                  ChoiceChip(
-                                    showCheckmark: false,
-                                    label: Text(switch (status) {
-                                      'open' => '讨论中',
-                                      'closed' => '已解决',
-                                      _ => '全部讨论',
-                                    }),
-                                    selected: discussionStatus == status,
-                                    onSelected: (_) => setState(() {
-                                      discussionStatus = status;
-                                      page = 1;
-                                      discussions = fetchDiscussions();
-                                    }),
-                                  ),
-                              ],
-                            ),
-                            const SizedBox(height: 12),
-                            FilledButton.icon(
-                              onPressed: widget.repo.canWrite
-                                  ? () async {
-                                      final created = await _newDiscussion(
-                                        context,
-                                        widget.repo,
-                                        widget.id,
-                                      );
-                                      if (created && mounted) {
-                                        setState(() {
-                                          page = 1;
-                                          load();
-                                        });
-                                      }
-                                    }
-                                  : null,
-                              icon: const Icon(Icons.add_comment_outlined),
-                              label: const Text('发起讨论'),
-                            ),
-                            const SizedBox(height: 12),
-                            if (threads.data!.items.isEmpty)
-                              const Padding(
-                                padding: EdgeInsets.all(24),
-                                child: Text('分享建议，提出问题，让项目继续前进。'),
+                            ConstrainedBox(
+                              constraints: BoxConstraints(
+                                maxHeight: area.maxHeight * .6,
                               ),
-                            for (final thread in threads.data!.items)
-                              Card(
-                                child: ListTile(
-                                  leading: Icon(
-                                    thread.getStringValue('status') == 'closed'
-                                        ? Icons.task_alt
-                                        : Icons.chat_bubble_outline,
-                                  ),
-                                  title: Text(thread.getStringValue('title')),
-                                  subtitle: Text(
-                                    '${_kind(thread.getStringValue('kind'))} · ${thread.getStringValue('status') == 'closed' ? '已解决' : '讨论中'}',
-                                  ),
-                                  trailing: const Icon(Icons.chevron_right),
-                                  onTap: () => Navigator.of(context)
-                                      .push(
-                                        MaterialPageRoute<void>(
-                                          builder: (_) => ForgeDiscussionPage(
-                                            repo: widget.repo,
-                                            thread: thread,
-                                            repositoryOwner: item
-                                                .getStringValue('owner'),
+                              child: SingleChildScrollView(
+                                child: _discussionFilters(),
+                              ),
+                            ),
+                            Expanded(
+                              child: FutureBuilder<ResultList<RecordModel>>(
+                                future: discussions,
+                                builder: (context, threads) {
+                                  if (threads.hasError) {
+                                    return _Retry(
+                                      onRetry: () => setState(load),
+                                    );
+                                  }
+                                  if (!threads.hasData) {
+                                    return const Center(
+                                      child: CircularProgressIndicator(),
+                                    );
+                                  }
+                                  return ListView(
+                                    padding: const EdgeInsets.all(16),
+                                    children: [
+                                      if (threads.data!.items.isEmpty)
+                                        Padding(
+                                          padding: const EdgeInsets.all(24),
+                                          child: Text(
+                                            discussionQuery.isNotEmpty ||
+                                                    discussionStatus != null ||
+                                                    discussionKind != null
+                                                ? '调整关键词或筛选条件，继续查找讨论。'
+                                                : '分享建议，提出问题，让项目继续前进。',
                                           ),
                                         ),
-                                      )
-                                      .then((_) {
-                                        if (mounted) setState(load);
-                                      }),
-                                ),
+                                      for (final thread in threads.data!.items)
+                                        Card(
+                                          child: ListTile(
+                                            leading: Icon(
+                                              thread.getStringValue('status') ==
+                                                      'closed'
+                                                  ? Icons.task_alt
+                                                  : Icons.chat_bubble_outline,
+                                            ),
+                                            title: Text(
+                                              thread.getStringValue('title'),
+                                            ),
+                                            subtitle: Text(
+                                              [
+                                                _kind(
+                                                  thread.getStringValue('kind'),
+                                                ),
+                                                thread.getStringValue(
+                                                          'status',
+                                                        ) ==
+                                                        'closed'
+                                                    ? '已解决'
+                                                    : '讨论中',
+                                                _authorLabel(
+                                                  thread.getStringValue(
+                                                    'owner',
+                                                  ),
+                                                  widget.repo.userId,
+                                                  item.getStringValue('owner'),
+                                                ),
+                                                if (_recordDate(
+                                                  context,
+                                                  thread,
+                                                  created: true,
+                                                ).isNotEmpty)
+                                                  _recordDate(
+                                                    context,
+                                                    thread,
+                                                    created: true,
+                                                  ),
+                                              ].join(' · '),
+                                            ),
+                                            trailing: const Icon(
+                                              Icons.chevron_right,
+                                            ),
+                                            onTap: () => Navigator.of(context)
+                                                .push(
+                                                  MaterialPageRoute<void>(
+                                                    builder: (_) =>
+                                                        ForgeDiscussionPage(
+                                                          repo: widget.repo,
+                                                          thread: thread,
+                                                          repositoryOwner: item
+                                                              .getStringValue(
+                                                                'owner',
+                                                              ),
+                                                        ),
+                                                  ),
+                                                )
+                                                .then((_) {
+                                                  if (mounted) {
+                                                    setState(() {
+                                                      page = 1;
+                                                      discussions =
+                                                          fetchDiscussions();
+                                                    });
+                                                  }
+                                                }),
+                                          ),
+                                        ),
+                                      _Pager(
+                                        page: page,
+                                        total: threads.data!.totalPages,
+                                        onPage: (value) => setState(() {
+                                          page = value;
+                                          discussions = fetchDiscussions();
+                                        }),
+                                      ),
+                                    ],
+                                  );
+                                },
                               ),
-                            _Pager(
-                              page: page,
-                              total: threads.data!.totalPages,
-                              onPage: (value) => setState(() {
-                                page = value;
-                                discussions = fetchDiscussions();
-                              }),
                             ),
                           ],
-                        );
-                      },
-                    ),
-                  ],
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         );
       },
@@ -844,7 +1200,25 @@ class _ForgeDiscussionPageState extends State<ForgeDiscussionPage> {
                     style: Theme.of(context).textTheme.headlineSmall,
                   ),
                   const SizedBox(height: 12),
-                  SelectableText(widget.thread.getStringValue('body')),
+                  Text(
+                    [
+                      _kind(widget.thread.getStringValue('kind')),
+                      _authorLabel(
+                        widget.thread.getStringValue('owner'),
+                        widget.repo.userId,
+                        widget.repositoryOwner,
+                      ),
+                      if (_recordDate(
+                        context,
+                        widget.thread,
+                        created: true,
+                      ).isNotEmpty)
+                        _recordDate(context, widget.thread, created: true),
+                    ].join(' · '),
+                    style: Theme.of(context).textTheme.labelMedium,
+                  ),
+                  const SizedBox(height: 12),
+                  ForgeMarkdown(data: widget.thread.getStringValue('body')),
                   const Divider(height: 32),
                   if (snapshot.hasError)
                     _Retry(onRetry: () => setState(load))
@@ -859,17 +1233,23 @@ class _ForgeDiscussionPageState extends State<ForgeDiscussionPage> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                reply.getStringValue('owner') ==
-                                        widget.repo.userId
-                                    ? '你'
-                                    : reply.getStringValue('owner') ==
-                                          widget.repositoryOwner
-                                    ? '项目维护者'
-                                    : '社区成员',
+                                [
+                                  _authorLabel(
+                                    reply.getStringValue('owner'),
+                                    widget.repo.userId,
+                                    widget.repositoryOwner,
+                                  ),
+                                  if (_recordDate(
+                                    context,
+                                    reply,
+                                    created: true,
+                                  ).isNotEmpty)
+                                    _recordDate(context, reply, created: true),
+                                ].join(' · '),
                                 style: Theme.of(context).textTheme.labelSmall,
                               ),
                               const SizedBox(height: 8),
-                              SelectableText(reply.getStringValue('body')),
+                              ForgeMarkdown(data: reply.getStringValue('body')),
                             ],
                           ),
                         ),
@@ -1016,23 +1396,30 @@ Future<bool> showProjectEditor(
                   for (int i = 0; i < controllers.length; i++)
                     Padding(
                       padding: const EdgeInsets.only(bottom: 12),
-                      child: TextField(
-                        controller: controllers[i],
-                        enabled: !saving,
-                        maxLength: [100, 500, 100000, 300, 2000, 500][i],
-                        minLines: i == 2 ? 4 : 1,
-                        maxLines: i == 2 ? 8 : 2,
-                        decoration: InputDecoration(
-                          labelText: [
-                            '项目名称',
-                            '简介',
-                            'README：目标、用法与参与方式',
-                            '话题：用空格分隔',
-                            '华师大归属材料：团队、用途与核验方式',
-                            'GitHub 仓库链接（选填）',
-                          ][i],
-                        ),
-                      ),
+                      child: i == 2
+                          ? _MarkdownComposer(
+                              controller: controllers[i],
+                              enabled: !saving,
+                              label: 'README：目标、用法与参与方式',
+                              maxLength: 100000,
+                            )
+                          : TextField(
+                              controller: controllers[i],
+                              enabled: !saving,
+                              maxLength: [100, 500, 100000, 300, 2000, 500][i],
+                              minLines: i == 2 ? 4 : 1,
+                              maxLines: i == 2 ? 8 : 2,
+                              decoration: InputDecoration(
+                                labelText: [
+                                  '项目名称',
+                                  '简介',
+                                  'README：目标、用法与参与方式',
+                                  '话题：用空格分隔',
+                                  '华师大归属材料：团队、用途与核验方式',
+                                  'GitHub 仓库链接（选填）',
+                                ][i],
+                              ),
+                            ),
                     ),
                   SwitchListTile(
                     title: const Text('校园作品公开范围'),
@@ -1160,13 +1547,11 @@ Future<bool> _newDiscussion(
                     enabled: !busy,
                     decoration: const InputDecoration(labelText: '标题'),
                   ),
-                  TextField(
+                  _MarkdownComposer(
                     controller: body,
                     maxLength: 20000,
-                    minLines: 4,
-                    maxLines: 8,
                     enabled: !busy,
-                    decoration: const InputDecoration(labelText: '内容'),
+                    label: '内容',
                   ),
                   if (error != null) Text(error!),
                 ],
@@ -1219,6 +1604,107 @@ Future<bool> _newDiscussion(
   return result ?? false;
 }
 
+class _MarkdownComposer extends StatefulWidget {
+  const _MarkdownComposer({
+    required this.controller,
+    required this.label,
+    required this.maxLength,
+    this.enabled = true,
+  });
+  final TextEditingController controller;
+  final String label;
+  final int maxLength;
+  final bool enabled;
+
+  @override
+  State<_MarkdownComposer> createState() => _MarkdownComposerState();
+}
+
+class _MarkdownComposerState extends State<_MarkdownComposer> {
+  bool preview = false;
+
+  @override
+  Widget build(BuildContext context) => Column(
+    crossAxisAlignment: CrossAxisAlignment.stretch,
+    children: [
+      Align(
+        alignment: Alignment.centerRight,
+        child: SegmentedButton<bool>(
+          showSelectedIcon: false,
+          segments: const [
+            ButtonSegment(
+              value: false,
+              label: Text('编辑'),
+              icon: Icon(Icons.edit_outlined),
+            ),
+            ButtonSegment(
+              value: true,
+              label: Text('预览'),
+              icon: Icon(Icons.visibility_outlined),
+            ),
+          ],
+          selected: {preview},
+          onSelectionChanged: widget.enabled
+              ? (values) => setState(() => preview = values.first)
+              : null,
+        ),
+      ),
+      const SizedBox(height: 10),
+      if (preview)
+        Container(
+          constraints: const BoxConstraints(minHeight: 140, maxHeight: 300),
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            border: Border.all(
+              color: Theme.of(context).colorScheme.outlineVariant,
+            ),
+            borderRadius: BorderRadius.circular(14),
+          ),
+          child: SingleChildScrollView(
+            child: ValueListenableBuilder<TextEditingValue>(
+              valueListenable: widget.controller,
+              builder: (context, value, _) => ForgeMarkdown(
+                data: value.text.trim().isEmpty ? '写下内容后，在这里查看排版。' : value.text,
+              ),
+            ),
+          ),
+        )
+      else
+        TextField(
+          controller: widget.controller,
+          enabled: widget.enabled,
+          maxLength: widget.maxLength,
+          minLines: 4,
+          maxLines: 8,
+          decoration: InputDecoration(
+            labelText: widget.label,
+            helperText: '支持 Markdown、代码块与网页链接',
+          ),
+        ),
+    ],
+  );
+}
+
+String _recordDate(
+  BuildContext context,
+  RecordModel row, {
+  bool created = false,
+}) {
+  final date = DateTime.tryParse(
+    row.getStringValue(created ? 'created' : 'updated'),
+  )?.toLocal();
+  return date == null
+      ? ''
+      : MaterialLocalizations.of(context).formatCompactDate(date);
+}
+
+String _authorLabel(String owner, String userId, String repositoryOwner) =>
+    owner.isNotEmpty && owner == userId
+    ? '你'
+    : owner.isNotEmpty && owner == repositoryOwner
+    ? '项目维护者'
+    : '社区成员';
+
 String _reviewLabel(RecordModel row) {
   if (row.getStringValue('visibility') == 'private') return '个人草稿';
   return switch (row.getStringValue('reviewState')) {
@@ -1230,9 +1716,9 @@ String _reviewLabel(RecordModel row) {
 }
 
 String _kind(String value) => switch (value) {
-  'idea' => '想法与建议',
-  'bug' => '问题反馈',
-  'update' => '项目进展',
+  'idea' => '功能建议',
+  'bug' => '缺陷反馈',
+  'update' => '进展分享',
   _ => '问答交流',
 };
 void _message(BuildContext context, String value) =>

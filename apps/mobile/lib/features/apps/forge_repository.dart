@@ -3,6 +3,8 @@ import 'package:campus_mobile/core/config/university_config.dart';
 
 /// Community content belongs to Campulse; external code hosting is optional.
 class ForgeRepository {
+  static const int _pageSize = 20;
+
   ForgeRepository(this.client, {String? universityId})
     : universityId =
           universityId ?? UniversityConfigs.defaultConfig.universityId;
@@ -17,22 +19,41 @@ class ForgeRepository {
     int page = 1,
     String query = '',
     bool mine = false,
-  }) => client
-      .collection('forge_repositories')
-      .getList(
-        page: page,
-        perPage: 20,
-        sort: '-updated',
-        filter: client.filter(
-          [
-            if (mine) 'owner = {:owner}',
-            if (!mine) 'visibility = "public" && reviewState = "approved" && schoolVerified = true && universityId = {:university}',
-            if (query.trim().isNotEmpty)
-              '(name ~ {:query} || summary ~ {:query} || topics ~ {:query})',
-          ].join(' && '),
-          {'owner': userId, 'query': query.trim(), 'university': universityId},
-        ),
-      );
+    String sort = 'updated',
+    bool starred = false,
+  }) async {
+    final sortField = switch (sort) {
+      'updated' => '-updated,id',
+      'created' => '-created,id',
+      'name' => 'name,id',
+      _ => throw ArgumentError.value(sort, 'sort', 'Select a project sort'),
+    };
+    if (starred && userId.isEmpty) {
+      return ResultList(page: page, perPage: _pageSize);
+    }
+    return client
+        .collection('forge_repositories')
+        .getList(
+          page: page,
+          perPage: _pageSize,
+          sort: sortField,
+          filter: client.filter(
+            [
+              if (starred) 'forge_stars_via_repository.owner ?= {:owner}',
+              if (mine) 'owner = {:owner}',
+              if (!mine) 'visibility = "public" && reviewState = "approved" && schoolVerified = true && universityId = {:university}',
+              if (query.trim().isNotEmpty)
+                '(name ~ {:query} || summary ~ {:query} || topics ~ {:query})',
+            ].join(' && '),
+            {
+              'owner': userId,
+              'query': query.trim(),
+              'university': universityId,
+            },
+          ),
+        );
+  }
+
   Future<RecordModel> project(String id) =>
       client.collection('forge_repositories').getOne(id);
   Future<RecordModel> saveProject({
@@ -82,15 +103,28 @@ class ForgeRepository {
     String repository, {
     int page = 1,
     String? status,
+    String? kind,
+    String query = '',
   }) => client
       .collection('forge_discussions')
       .getList(
         page: page,
-        perPage: 20,
+        perPage: _pageSize,
         sort: '-created',
         filter: client.filter(
-          'repository = {:id}${status == null ? '' : ' && status = {:status}'}',
-          {'id': repository, 'status': status},
+          [
+            'repository = {:id}',
+            if (status != null) 'status = {:status}',
+            if (kind != null) 'kind = {:kind}',
+            if (query.trim().isNotEmpty)
+              '(title ~ {:query} || body ~ {:query})',
+          ].join(' && '),
+          {
+            'id': repository,
+            'status': status,
+            'kind': kind,
+            'query': query.trim(),
+          },
         ),
       );
   Future<RecordModel> discuss(
@@ -120,7 +154,7 @@ class ForgeRepository {
           .collection('forge_replies')
           .getList(
             page: page,
-            perPage: 20,
+            perPage: _pageSize,
             sort: 'created',
             filter: client.filter('discussion = {:id}', {'id': discussion}),
           );

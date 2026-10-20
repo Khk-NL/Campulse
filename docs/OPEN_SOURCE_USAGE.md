@@ -1,6 +1,6 @@
 # 开源软件使用
 
-更新：2026-10-15。下表区分运行时依赖、随仓库分发的源码和产品参考。新增依赖或复制代码时同步维护来源、版本、版权与许可。
+更新：2026-10-20。下表区分运行时依赖、随仓库分发的源码和产品参考。新增依赖或复制代码时同步维护来源、版本、版权与许可。
 
 | 项目 | 来源与许可 | 使用范围 |
 | --- | --- | --- |
@@ -12,9 +12,14 @@
 | file_picker / pdfrx | [file_picker](https://pub.dev/packages/file_picker)、[pdfrx](https://pub.dev/packages/pdfrx)，MIT | Flutter 文件选择与 PDF 阅读 |
 | unpdf | [源码](https://github.com/unjs/unpdf)，MIT | 网关 PDF 全文提取，锁定版本与完整性哈希保存在 package-lock.json |
 | Super Productivity | [源码](https://github.com/super-productivity/super-productivity)，MIT | 参考任务归档/恢复、截止日期、子任务和预计用时 |
-| GitHubStarsManager | [源码](https://github.com/AmintaCCCP/GithubStarsManager/) | 分类、筛选与项目发现的产品参考；代码引入时另核许可及版本 |
+| flutter_markdown_plus | [源码](https://github.com/foresightmobile/flutter_markdown_plus)，BSD-3-Clause | 运行时依赖，锁定 1.0.12；用于项目 README、讨论及编辑预览，保留 Flutter Authors 原版权与许可 |
+| markdown | [源码](https://github.com/dart-lang/markdown)，BSD-3-Clause | 直接依赖，锁定 7.3.1；用于 Markdown 代码节点识别，保留 Dart project authors 原版权与许可 |
+| GitHubStarsManager | [源码](https://github.com/AmintaCCCP/GithubStarsManager/)，MIT | 收藏组织与筛选的产品参考，Campulse 的 Star 仍来自自身数据库 |
+| GitHub / Hugging Face Hub | [Issue 筛选](https://docs.github.com/en/issues/tracking-your-work-with-issues/using-issues/filtering-and-searching-issues-and-pull-requests)、[Hub Community](https://huggingface.co/docs/hub/repositories-pull-requests-discussions) | 项目概览、Markdown、议题分类与处理流程的设计参考；取舍见[界面设计](DESIGN.md) |
 
 产品参考与源码分发分别记录。当前完整依赖清单以 package.json、锁文件和 Flutter pubspec 为准；本表集中说明主要集成及参考来源。MIT 组件发行物保留版权与许可，copyleft 代码引入按其许可义务处理，第三方标识按各自使用要求处理。
+
+1.6.1 的 Markdown 组件封装界面样式、代码复制和外链处理，渲染及语法解析交给上述两个 BSD 依赖。发行物随 Flutter 依赖许可材料保留其版权、三项条件和免责声明，源码依赖版本以 `apps/mobile/pubspec.lock` 为准。
 
 ## EduWork 集成语义
 

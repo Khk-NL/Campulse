@@ -6,6 +6,8 @@ class ProjectFocusRepository extends ForgeRepository {
   ProjectFocusRepository() : super(PocketBase('http://example.test'));
 
   final queries = <({bool mine, String query})>[];
+  final projectOptions = <({bool mine, bool starred, String sort})>[];
+  final starredRepositories = <String>{};
   final rows = [
     RecordModel.fromJson({
       'id': 'public-project',
@@ -38,8 +40,11 @@ class ProjectFocusRepository extends ForgeRepository {
     int page = 1,
     String query = '',
     bool mine = false,
+    String sort = 'updated',
+    bool starred = false,
   }) async {
     queries.add((mine: mine, query: query));
+    projectOptions.add((mine: mine, starred: starred, sort: sort));
     final found = rows.where((row) {
       final inScope = mine
           ? row.getStringValue('owner') == userId
@@ -50,8 +55,15 @@ class ProjectFocusRepository extends ForgeRepository {
         row.getStringValue('summary'),
         row.getStringValue('topics'),
       ].join(' ').toLowerCase();
-      return inScope && text.contains(query.toLowerCase());
+      return inScope &&
+          (!starred || starredRepositories.contains(row.id)) &&
+          text.contains(query.toLowerCase());
     }).toList();
+    found.sort(
+      (a, b) => sort == 'name'
+          ? a.getStringValue('name').compareTo(b.getStringValue('name'))
+          : b.getStringValue(sort).compareTo(a.getStringValue(sort)),
+    );
     return ResultList(
       items: found,
       page: page,

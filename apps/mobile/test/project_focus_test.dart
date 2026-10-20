@@ -103,6 +103,10 @@ void main() {
       await tester.pump(const Duration(milliseconds: 400));
       await tester.tap(find.text('探索').last);
       await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(ChoiceChip, '我的 Star'));
+      await tester.pumpAndSettle();
+      await tester.enterText(find.widgetWithText(TextField, '搜索项目'), '旧搜索');
+      await tester.pump(const Duration(milliseconds: 400));
       await tester.tap(find.text('发布项目'));
       await tester.pumpAndSettle();
       await tester.enterText(find.widgetWithText(TextField, '项目名称'), '新的校园作品');
@@ -113,6 +117,11 @@ void main() {
         1,
       );
       expect(projects.queries.last, (mine: true, query: ''));
+      expect(projects.projectOptions.last, (
+        mine: true,
+        starred: false,
+        sort: 'updated',
+      ));
       expect(
         tester
             .widget<TextField>(find.widgetWithText(TextField, '搜索我的仓库'))

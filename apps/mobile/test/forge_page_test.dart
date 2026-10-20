@@ -15,6 +15,18 @@ class FakeForge extends ForgeRepository {
   final threads = <RecordModel>[];
   final responses = <RecordModel>[];
   final queries = <String>[];
+  final projectOptions = <({bool mine, bool starred, String sort})>[];
+  final discussionQueries =
+      <
+        ({
+          String repository,
+          int page,
+          String? status,
+          String? kind,
+          String query,
+        })
+      >[];
+  final starredRepositories = <String>{};
   bool fail = false;
   @override
   String get userId => 'member1';
@@ -25,12 +37,26 @@ class FakeForge extends ForgeRepository {
     int page = 1,
     String query = '',
     bool mine = false,
+    String sort = 'updated',
+    bool starred = false,
   }) async {
     queries.add(query);
+    projectOptions.add((mine: mine, starred: starred, sort: sort));
     if (fail) throw StateError('network');
     final found = rows
-        .where((r) => r.getStringValue('name').contains(query))
+        .where(
+          (r) =>
+              (!starred || starredRepositories.contains(r.id)) &&
+              '${r.getStringValue('name')} ${r.getStringValue('summary')} ${r.getStringValue('topics')}'
+                  .toLowerCase()
+                  .contains(query.toLowerCase()),
+        )
         .toList();
+    found.sort(
+      (a, b) => sort == 'name'
+          ? a.getStringValue('name').compareTo(b.getStringValue('name'))
+          : b.getStringValue(sort).compareTo(a.getStringValue(sort)),
+    );
     return ResultList(items: found, totalItems: found.length, totalPages: 1);
   }
 
@@ -82,10 +108,24 @@ class FakeForge extends ForgeRepository {
     String repository, {
     int page = 1,
     String? status,
+    String? kind,
+    String query = '',
   }) async {
+    discussionQueries.add((
+      repository: repository,
+      page: page,
+      status: status,
+      kind: kind,
+      query: query,
+    ));
     final rows = threads
         .where(
-          (row) => status == null || row.getStringValue('status') == status,
+          (row) =>
+              (status == null || row.getStringValue('status') == status) &&
+              (kind == null || row.getStringValue('kind') == kind) &&
+              '${row.getStringValue('title')} ${row.getStringValue('body')}'
+                  .toLowerCase()
+                  .contains(query.toLowerCase()),
         )
         .toList();
     return ResultList(items: rows, totalItems: rows.length, totalPages: 1);

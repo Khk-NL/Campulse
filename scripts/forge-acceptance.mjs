@@ -105,11 +105,27 @@ try {
   const reply = await good('项目所有者回复', 'forge_replies', a.token, { owner: a.id, discussion: thread.id, body: '欢迎从文档开始' });
   await good('另一会话读回回复', 'forge_replies', b.token, undefined, 'GET', `/records/${reply.id}`);
   const star = await good('用户B关注项目', 'forge_stars', b.token, { owner: b.id, repository: repository.id });
+  const starredFilter = `id = "${repository.id}" && forge_stars_via_repository.owner ?= "${b.id}" && visibility = "public" && reviewState = "approved" && schoolVerified = true && universityId = "ecnu"`;
+  const saved = await good('我的Star使用项目反向关系查询', 'forge_repositories', b.token, undefined, 'GET', `/records?filter=${encodeURIComponent(starredFilter)}&sort=-updated,id&perPage=20`);
+  check('我的Star实际读回本人收藏', saved.items.length === 1 && saved.items[0].id === repository.id);
+  const ownStars = await good('另一用户的Star查询独立', 'forge_repositories', a.token, undefined, 'GET', `/records?filter=${encodeURIComponent(`id = "${repository.id}" && forge_stars_via_repository.owner ?= "${a.id}"`)}`);
+  check('另一用户的Star列表保持本人范围', ownStars.totalItems === 0);
+  const projectScope = encodeURIComponent(`id = "${repository.id}" || id = "${second.id}"`);
+  const firstPage = await good('项目名称排序第一页', 'forge_repositories', a.token, undefined, 'GET', `/records?filter=${projectScope}&sort=name,id&perPage=1&page=1`);
+  const nextPage = await good('项目名称排序第二页', 'forge_repositories', a.token, undefined, 'GET', `/records?filter=${projectScope}&sort=name,id&perPage=1&page=2`);
+  check('服务端排序与分页配合', firstPage.totalItems === 2 && firstPage.items[0].id === repository.id && nextPage.items[0].id === second.id);
+  const issueScope = `repository = "${repository.id}" && status = "open" && kind = "question" && (title ~ "参与" || body ~ "参与")`;
+  const searched = await good('讨论正文关键词与类型状态组合查询', 'forge_discussions', b.token, undefined, 'GET', `/records?filter=${encodeURIComponent(issueScope)}`);
+  check('讨论组合搜索命中真实正文', searched.totalItems === 1 && searched.items[0].id === thread.id);
+  const bugs = await good('讨论类型筛选独立', 'forge_discussions', b.token, undefined, 'GET', `/records?filter=${encodeURIComponent(`repository = "${repository.id}" && kind = "bug"`)}`);
+  check('讨论类型筛选保留项目范围', bugs.totalItems === 0);
   const duplicate = await request('forge_stars', b.token, { owner: b.id, repository: repository.id });
   check('重复关注受唯一索引限制', duplicate.status !== 200);
   const anonymous = await request('forge_replies', null, { owner: b.id, discussion: thread.id, body: '匿名写入' });
   check('匿名回复被拒绝', anonymous.status !== 200);
   await good('项目所有者关闭问题', 'forge_discussions', a.token, { status: 'closed' }, 'PATCH', `/records/${thread.id}`);
+  const resolved = await good('关闭状态参与组合搜索', 'forge_discussions', b.token, undefined, 'GET', `/records?filter=${encodeURIComponent(`repository = "${repository.id}" && status = "closed" && kind = "question" && title ~ "贡献"`)}`);
+  check('关闭讨论仍可搜索读回', resolved.totalItems === 1 && resolved.items[0].id === thread.id);
   const closed = await request('forge_replies', b.token, { owner: b.id, discussion: thread.id, body: '关闭后回复' });
   check('关闭问题停止追加回复', closed.status !== 200);
   await good('问题作者重新开启', 'forge_discussions', b.token, { status: 'open' }, 'PATCH', `/records/${thread.id}`);
@@ -117,6 +133,8 @@ try {
   await good('项目修改后进入复审', 'forge_repositories', a.token, { name: '调整后的验收项目', reviewState: 'pending' }, 'PATCH', `/records/${repository.id}`);
   check('复审项目重新对其他用户隐藏', (await request('forge_repositories', b.token, undefined, 'GET', `/records/${repository.id}`)).status === 404);
   await good('项目转为私有', 'forge_repositories', a.token, { visibility: 'private', reviewState: 'pending' }, 'PATCH', `/records/${repository.id}`);
+  const hiddenStar = await good('私有项目退出他人Star列表', 'forge_repositories', b.token, undefined, 'GET', `/records?filter=${encodeURIComponent(starredFilter)}`);
+  check('Star列表服从项目可见性', hiddenStar.totalItems === 0);
   for (const [collection, id] of [['forge_repositories', repository.id], ['forge_discussions', thread.id], ['forge_replies', reply.id], ['forge_stars', star.id]]) {
     const hidden = await request(collection, b.token, undefined, 'GET', `/records/${id}`);
     check(`私有项目隔离 ${collection}`, hidden.status === 404);

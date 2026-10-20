@@ -1,6 +1,6 @@
 # 系统架构
 
-更新：2026-10-19。当前主链路为 Flutter Android / Windows / Web → PocketBase，覆盖校园项目、审核、讨论、收藏与校园辅助工具。Node.js AI 网关和旧学习模块保留历史实现，1.6.0 客户端主流程已撤下对应入口。
+更新：2026-10-20。当前主链路为 Flutter Android / Windows / Web → PocketBase，覆盖校园项目、审核、讨论、收藏与校园辅助工具。Node.js AI 网关和旧学习模块保留历史实现，1.6.0 客户端主流程已撤下对应入口。
 
 主导航为探索、我的仓库、校园、我的。前两页分别使用 `ForgePage` 的公开项目和个人仓库查询；`CampusPage` 收拢课程/课表、快速访问、校园广场。导航和子标签按首次访问装配，已访问页面保留状态；全局搜索聚焦项目查询。课程卡片、课表和旧目录搜索复用的课程详情只显示基础信息。新建草稿保存后进入个人仓库，公开展示仍走逐项目审核。
 
@@ -29,7 +29,8 @@ Caddy（现有共享服务器的 80/443）
 | 启动、会话与偏好 | `apps/mobile/lib/core/` | 启动探测、安全存储会话、主题与语言 |
 | 公共目录与搜索 | `apps/mobile/lib/data/repositories/`、`features/apps/` | 远程目录、分类、收藏和服务启动 |
 | 校园工具 | `features/campus/campus_page.dart`、`features/study/course_hub_page.dart`、`features/timetable/` | 课程基础信息、课表、CSV 与校园通知；另含公共快速访问和广场 |
-| 项目社区 | `apps/mobile/lib/features/apps/forge_page.dart`、`forge_repository.dart` | 我的仓库、逐项目审核、发现、讨论、回复和关注 |
+| 项目社区 | `apps/mobile/lib/features/apps/forge_page.dart`、`forge_repository.dart` | 我的仓库、逐项目审核、发现、Star、排序和讨论组合筛选 |
+| 项目内容阅读 | `features/apps/forge_markdown.dart` | 复用 Markdown 渲染依赖，统一 README、讨论、回复及编辑预览，封装代码复制与外链打开 |
 | 校园广场 | `apps/mobile/lib/features/community/` | 竞赛/运动/学习/扩列召集、报名、讨论与自愿公开名片 |
 | 自适应工作区 | `features/shared/widgets/workspace_layout.dart`、`features/shell/app_shell.dart` | 桌面侧栏、紧凑底栏、响应式网格与键盘导航 |
 | Windows 运行与发布 | `apps/mobile/windows/`、`.github/workflows/windows-release.yml` | 原生窗口、品牌图标、锁定依赖构建和 ZIP Release |
@@ -42,6 +43,10 @@ Caddy（现有共享服务器的 80/443）
 客户端采用 ChangeNotifier 与 InheritedNotifier 组织状态。Repository 隔离界面和数据服务；生产配置使用 PocketBase。启动的另一条分支保留旧 REST 客户端，正式启动已移除本地演示数据回退，测试样本位于客户端测试目录。
 
 探索、个人仓库和校园快速访问独立呈现加载状态。项目搜索使用可释放的控制器和 300ms 防抖，键盘提交与清空会取消待执行查询。学校平台对比及集成层级见[路线图](ROADMAP.md#学校平台对比与集成)。
+
+1.6.1 的 Star 与排序在 `ForgeRepository.projects` 组合后交给服务器分页；Star 使用 `forge_stars_via_repository.owner` 反向关系限定本人，公开视图继续叠加同校、已审核和公开条件。讨论查询同时保留项目 ID、类型、处理状态和标题/正文关键词。筛选控件位于异步列表之外，读取中仍可继续输入；查询条件变化回到第一页，新建内容后重置旧筛选。
+
+Markdown 原文保持现有字段，组件以 `flutter_markdown_plus` 和 `markdown` 渲染。标题、列表、表格、代码块在客户端呈现，代码和表格各自横向滚动。编辑预览读取同一个控制器，保存原文；网页链接复用系统打开工具，相关协议和相对地址有明确反馈。本轮沿用现有集合和网关。
 
 ## 数据与权限
 
