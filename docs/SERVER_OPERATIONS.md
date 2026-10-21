@@ -8,6 +8,8 @@
 
 升级探测需区分服务启动与监听就绪，并按接口认证语义判断状态：`/v1/forge/status` 匿名请求预期 401，完整功能由已验证普通账号验收。脚本已补监听重试和网关失败恢复。1.6.3 社区信息流复用既有集合，部署客户端云包即可。
 
+本轮收尾检查：PocketBase、AI、Caddy、atop 四项服务 active；根分区使用 21%，可用 30G。I/O 压力采样 some avg10 为 1.81、full avg10 为 1.63；这是该时刻的采样，历史走势结合 atop 与云监控查看。验收隔离记录已清理，安装包维护改为 Releases，当前 Git 树保留下载说明。
+
 2026-10-16 架构复核后，运营台增加收到的报名与多行编辑，三项静态文件增量替换后公开读回一致；恢复点 `/opt/campus/backups/admin-review-20261016`。远程社区 25 项验收通过并清理临时数据，数据库迁移沿用 0013。PocketBase、AI、Caddy 与 atop 均 active，根分区 20% / 可用 30G；正式域名 HTTP 备案阻断与 TLS 1.2 重置仍可复现。
 
 2026-10-16 校园广场升级：源提交 `ce0535c`，生产新增迁移 `1790210013_campus_square.js`。一致性恢复点 `/opt/campus/backups/community-20261016-095650`；运营台原件在 `/opt/campus/backups/admin-square-20261016-ce0535c`。迁移后 health 与 23 项广场远程 API 验收通过，测试生成的临时账号和记录已清理。此次只短暂停 PocketBase，其他站点、Caddy 与 AI 网关保持。

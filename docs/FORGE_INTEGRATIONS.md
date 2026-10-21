@@ -36,13 +36,13 @@ Android/Windows 使用系统存储；Web 使用当前浏览器、当前站点的
 ## 第一步：GitHub Token
 
 1. 打开 [GitHub 个人访问令牌](https://github.com/settings/personal-access-tokens)，选择创建 fine-grained personal access token。
-2. 为 Token 命名并设置适当期限。当前功能读取公开仓库和个人 Stars，可从公开仓库只读访问开始配置。
+2. 为 Token 命名并设置期限。Repository access 选择公开仓库；在 Account permissions 中把 **Starring** 设为 **Read-only**，用于读取自己的 Stars。仓库元数据沿用只读权限，当前功能按公开项目导入。
 3. 复制生成的 Token，粘贴到应用的“GitHub Token”输入框。
 4. 点击“检查 GitHub”。成功时表示已通过 GitHub 实际读取个人 Star 列表，空列表也属于有效响应。
 5. 点击“保存到当前设备”，进入工作台的“GitHub Star”查看分页结果。
 6. 选择一个公开项目，点击“存入个人仓库”。随后在 Campulse 的“我的仓库”核对私有草稿、README、源码链接和审核状态。
 
-接口使用 GitHub 官方 REST API，仅执行读取。公开仓库额度耗尽时会显示等待时间；调整 Token 或等待额度恢复后重试。私有仓库沿用其原平台权限，导入范围为公开项目。
+接口使用 GitHub 官方 REST API，仅执行读取。权限依据见 [GitHub Stars 接口说明](https://docs.github.com/en/rest/activity/starring?apiVersion=2026-03-10#list-repositories-starred-by-the-authenticated-user)。公开仓库额度耗尽时会显示等待时间；调整 Token 或等待额度恢复后重试。私有仓库沿用其原平台权限，导入范围为公开项目。
 
 ## 第二步：选择模型服务
 
