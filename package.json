@@ -15,7 +15,7 @@
     "web:test": "node --test scripts/serve-web.test.mjs",
     "lint": "turbo run lint",
     "typecheck": "turbo run typecheck",
-    "test": "turbo run build && node scripts/smoke/contracts.smoke.cjs && node scripts/smoke/launcher-search.smoke.cjs && node scripts/smoke/plugin-runtime.smoke.cjs && node scripts/smoke/campus-sdk.smoke.cjs && node scripts/smoke/tag-normalization.smoke.cjs && node --test apps/ai-gateway/test/*.test.mjs scripts/admin-console.test.mjs scripts/ui-copy.test.mjs scripts/quick-access-catalog.test.mjs scripts/serve-web.test.mjs",
+    "test": "turbo run build && node scripts/smoke/contracts.smoke.cjs && node scripts/smoke/launcher-search.smoke.cjs && node scripts/smoke/plugin-runtime.smoke.cjs && node scripts/smoke/campus-sdk.smoke.cjs && node scripts/smoke/tag-normalization.smoke.cjs && node --test apps/ai-gateway/test/*.test.mjs scripts/admin-console.test.mjs scripts/ui-copy.test.mjs scripts/quick-access-catalog.test.mjs scripts/serve-web.test.mjs scripts/release-workflow.test.mjs",
     "clean": "turbo run clean",
     "smoke": "turbo run build && node scripts/smoke/contracts.smoke.cjs && node scripts/smoke/launcher-search.smoke.cjs && node scripts/smoke/plugin-runtime.smoke.cjs && node scripts/smoke/campus-sdk.smoke.cjs && node scripts/smoke/tag-normalization.smoke.cjs",
     "format": "prettier --write \"**/*.{ts,tsx,js,mjs,json,md,yaml,yml}\"",

@@ -2,7 +2,7 @@
 
 更新：2026-10-21。主链路为 Flutter Android / Windows / Web → PocketBase，覆盖校园项目、审核、讨论、收藏与校园辅助工具。1.6.2 复用 Node.js 网关接入 GitHub 和项目分析；旧学习页面按存量实现保留。
 
-1.6.2 的客户端、网关与新增集合代码待部署，测试结果正在汇总。发布状态以[验收记录](ACCEPTANCE.md)为准。
+截至 2026-10-21，1.6.2 Web、项目网关与收藏库迁移已部署。当前 `1.6.3+12` 正开发社区交流信息流，沿用已有服务、集合和依赖；具体来源提交、测试数量与发布状态统一以[验收记录](ACCEPTANCE.md)为准。
 
 主导航为探索、我的仓库、校园、我的。前两页分别使用 `ForgePage` 的公开项目和个人仓库查询；`CampusPage` 收拢课程/课表、快速访问、校园广场。导航和子标签按首次访问装配，已访问页面保留状态；全局搜索聚焦项目查询。课程卡片、课表和旧目录搜索复用的课程详情只显示基础信息。新建草稿保存后进入个人仓库，公开展示仍走逐项目审核。
 
@@ -23,7 +23,7 @@ Caddy（现有共享服务器的 80/443）
                   └─ pb_public：官网、运营台、/app/ 浏览器工作台
 ```
 
-当前 APK 公开地址见 `apps/mobile/config/eduwork.production.example.json`，仍使用临时域名。正式域名切换按[域名恢复](DOMAIN_FILING.md)执行。
+Android APK、校验文件与版本元数据由 GitHub Release assets 分发，工作流不再向 main 回写二进制。运行时服务配置见 `apps/mobile/config/eduwork.production.example.json`，仍使用临时域名。正式域名切换按[域名恢复](DOMAIN_FILING.md)执行。
 
 ## 模块与代码
 
@@ -33,6 +33,7 @@ Caddy（现有共享服务器的 80/443）
 | 公共目录与搜索 | `apps/mobile/lib/data/repositories/`、`features/apps/` | 远程目录、分类、收藏和服务启动 |
 | 校园工具 | `features/campus/campus_page.dart`、`features/study/course_hub_page.dart`、`features/timetable/` | 课程基础信息、课表、CSV 与校园通知；另含公共快速访问和广场 |
 | 项目社区 | `apps/mobile/lib/features/apps/forge_page.dart`、`forge_repository.dart` | 我的仓库、逐项目审核、发现、Star、排序和讨论组合筛选 |
+| 社区交流（1.6.3 开发中） | `features/apps/forge_community_page.dart`、`ForgeRepository.communityThreads` | 跨公开项目的频道、关键词、Star 筛选、时间排序与讨论分页，进入原项目或讨论 |
 | 项目内容阅读 | `features/apps/forge_markdown.dart` | 复用 Markdown 渲染依赖，统一 README、讨论、回复及编辑预览，封装代码复制与外链打开 |
 | 个人收藏库 | `features/apps/forge_library_page.dart`、`forge_library_repository.dart` | 分类、标签、备注、批量整理、个人分析和版本消息 |
 | 集成设置与请求 | `features/apps/forge_integrations.dart` | 按账号保存本机 Key 与模型选择，使用当前会话调用项目集成网关 |
@@ -50,11 +51,13 @@ Caddy（现有共享服务器的 80/443）
 
 探索、个人仓库和校园快速访问独立呈现加载状态。项目搜索使用可释放的控制器和 300ms 防抖，键盘提交与清空会取消待执行查询。学校平台对比及集成层级见[路线图](ROADMAP.md#学校平台对比与集成)。
 
-1.6.1 的 Star 与排序在 `ForgeRepository.projects` 组合后交给服务器分页；Star 使用 `forge_stars_via_repository.owner` 反向关系限定本人，公开视图继续叠加同校、已审核和公开条件。讨论查询同时保留项目 ID、类型、处理状态和标题/正文关键词。筛选控件位于异步列表之外，读取中仍可继续输入；查询条件变化回到第一页，新建内容后重置旧筛选。
+2026-10-20 的 1.6.1 加入 Star 与排序，在 `ForgeRepository.projects` 组合后交给服务器分页；Star 使用 `forge_stars_via_repository.owner` 反向关系限定本人，公开视图继续叠加同校、已审核和公开条件。讨论查询同时保留项目 ID、类型、处理状态和标题/正文关键词。筛选控件位于异步列表之外，读取中仍可继续输入；查询条件变化回到第一页，新建内容后重置旧筛选。
 
 Markdown 原文保持现有字段，组件以 `flutter_markdown_plus` 和 `markdown` 渲染。标题、列表、表格、代码块在客户端呈现，代码和表格各自横向滚动。编辑预览读取同一个控制器，保存原文；网页链接复用系统打开工具，相关协议和相对地址有明确反馈。
 
 ## 项目收藏与集成（1.6.2）
+
+本节对应 2026-10-21 已部署的功能；实际连接与验收范围见[验收记录](ACCEPTANCE.md)。
 
 `ForgeLibraryPage` 通过 `ForgeLibraryRepository` 读取本人 Star、分类、收藏整理、订阅与历史版本事件。Star 决定收藏库展示的项目，`forge_bookmarks` 单独保存分类、标签、备注和分析；取消 Star 后这些整理内容继续保留，再次 Star 时按同一项目读回。分类锁定用于应用 AI 建议时保留原分类，手工整理仍可修改。
 
@@ -65,6 +68,14 @@ GitHub 功能经过 `/v1/forge/github`、`github/stars` 与 `github/import` 读�
 `/v1/forge/analyze` 根据项目 README 生成摘要、使用场景、入门步骤、风险与分类标签建议，结果存入当前用户的 bookmark。用户确认后应用个人分类和标签，公共项目内容保持原值。网关继续使用已验证的 PocketBase 会话校验归属。
 
 `ForgeIntegrationStore` 沿用 `FlutterSecureStorage`，以 PocketBase origin 和用户 ID 划分本机设置，保存 GitHub Token、各模型提供方的 Key 与模型名称。数据库保存整理结果和元数据，服务器默认 Key 由环境变量提供。模型请求支持 ChatECNU、DeepSeek（默认 `deepseek-flash`）；EduChat 使用管理员配置的兼容 `/chat/completions` 服务地址，模型宿主单独部署。
+
+ChatECNU 已有真实 JSON 调用及项目分析验证。DeepSeek 真实 Key、个人 GitHub Stars Token、自部署 EduChat 地址尚缺，对应适配由 mock 测试覆盖，尚未完成这些配置下的真实连接验证；具体证据统一见[验收记录](ACCEPTANCE.md)。
+
+## 社区交流（1.6.3，2026-10-21 开发中）
+
+`ForgeCommunityPage` 通过 `ForgeRepository.communityThreads` 查询 `forge_discussions` 并展开 `repository`。服务器过滤同时限制华师大、学校归属已核验、已审核和公开项目，再组合频道类型、标题/正文/项目话题关键词、当前用户 Star 关系和创建或更新时间排序；每页 20 条，条件变化重置分页。
+
+频道复用 `question`、`idea`、`update`、`bug`，加上全部视图。信息流保持项目来源，可进入现有项目详情或完整讨论及回复；发帖先选择公开项目，复用现有 Markdown 编辑器和讨论写入。讨论与回复无需预审核，项目公开继续审核；不新增集合、迁移或第三方依赖。组织和交互参考 CSDN 的范围见[界面设计](DESIGN.md)。
 
 ## 数据与权限
 
@@ -82,6 +93,7 @@ GitHub 功能经过 `/v1/forge/github`、`github/stars` 与 `github/import` 读�
 | 查服务、收藏和打开入口 | `apps_page.dart`、CampusLauncher | 管理员公共目录，收藏按用户保存；网页由系统浏览器打开 |
 | 项目发布、审核、讨论和 Star | Forge 页面与 Repository | 私有草稿 → 逐项审核 → 公共发现；讨论继承项目可见范围 |
 | 整理收藏、查看更新与项目分析 | `ForgeLibraryPage`、Library Repository、Forge Gateway | 个人分类与书签独立保存；GitHub 读取和模型分析结果归当前用户 |
+| 按频道浏览、发起社区交流（1.6.3 开发中） | `ForgeCommunityPage` → `communityThreads` → 原讨论与项目入口 | 仅聚合已审核华师大公开项目，复用讨论/回复；发帖按公开项目关联 |
 | 发起召集、报名和讨论 | `community_page.dart`、`community_repository.dart` | `community_posts/interests/replies`；发起人和报名者可读报名留言 |
 | 查看“我报名的” | 对报名集合按 owner 分页，展开 `post` 关系 | 每页 20 条，学校/类型/校区/搜索在服务端关联过滤，保留分页总数 |
 | 编辑兴趣名片 | 用户主动公开，按 owner 查找后新增或更新 | 唯一 owner 索引；并发创建时重新查找本人记录再更新 |
@@ -92,7 +104,7 @@ GitHub 功能经过 `/v1/forge/github`、`github/stars` 与 `github/import` 读�
 
 ## 存量学习实现
 
-以下实现保留在源码与数据层中，1.6.0 主导航和课程基础详情已断开对应入口。历史验收结果按原版本追溯。
+以下实现保留在源码与数据层中，自 2026-10-19 的 1.6.0 起主导航和课程基础详情已断开对应入口。历史验收结果按原版本追溯。
 
 | 历史操作 | 保留实现 | 数据路径及边界 |
 | --- | --- | --- |

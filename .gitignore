@@ -7,6 +7,9 @@ dist/
 build/
 out/
 *.tsbuildinfo
+release/*.apk
+release/*.apk.sha256
+release/Campulse-latest.json
 # Turborepo 本地缓存 / turborepo local cache
 .turbo/
 

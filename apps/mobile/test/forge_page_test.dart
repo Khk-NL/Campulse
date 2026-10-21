@@ -28,6 +28,21 @@ class FakeForge extends ForgeRepository {
       >[];
   final starredRepositories = <String>{};
   bool fail = false;
+  int communityLoads = 0;
+
+  @override
+  Future<ResultList<RecordModel>> communityThreads({
+    int page = 1,
+    String query = '',
+    String? kind,
+    String? status,
+    bool starred = false,
+    String sort = 'created',
+  }) async {
+    communityLoads++;
+    return ResultList(items: [], totalItems: 0, totalPages: 1);
+  }
+
   @override
   String get userId => 'member1';
   @override
@@ -185,6 +200,21 @@ class PendingForge extends FakeForge {
 }
 
 void main() {
+  testWidgets('exploration opens the community feed with its real repository', (
+    tester,
+  ) async {
+    final repo = FakeForge();
+    await tester.pumpWidget(MaterialApp(home: ForgePage(repository: repo)));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(FilledButton, '社区交流'));
+    await tester.pumpAndSettle();
+    expect(repo.communityLoads, 1);
+    expect(find.text('技术问答'), findsOneWidget);
+    expect(find.text('经验与建议'), findsOneWidget);
+    expect(find.widgetWithText(FilledButton, '发起交流'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets(
     'repository topics filter the feed while source links stay validated',
     (tester) async {

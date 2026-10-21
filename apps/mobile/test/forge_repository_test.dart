@@ -9,6 +9,7 @@ import 'package:pocketbase/pocketbase.dart';
 ForgeRepository repository(
   List<http.Request> requests, {
   bool signedIn = true,
+  String? universityId,
 }) {
   final client = PocketBase(
     'https://example.test',
@@ -38,7 +39,7 @@ ForgeRepository repository(
       RecordModel.fromJson({'id': 'member', 'verified': true}),
     );
   }
-  return ForgeRepository(client);
+  return ForgeRepository(client, universityId: universityId);
 }
 
 void main() {
@@ -172,6 +173,178 @@ void main() {
           requests,
           signedIn: false,
         ).projects(starred: true, sort: 'updated,id'),
+        throwsArgumentError,
+      );
+      expect(requests, isEmpty);
+    },
+  );
+
+  test(
+    'community threads retain approved school scope and expand only project',
+    () async {
+      final requests = <http.Request>[];
+      final rows = await repository(
+        requests,
+        signedIn: false,
+      ).communityThreads();
+      final params = requests.single.url.queryParameters;
+      expect(
+        requests.single.url.path,
+        '/api/collections/forge_discussions/records',
+      );
+      expect(params['page'], '1');
+      expect(params['perPage'], '20');
+      expect(params['sort'], '-created,id');
+      expect(params['expand'], 'repository');
+      expect(
+        params['filter'],
+        'repository.visibility = "public" && repository.reviewState = "approved" && repository.schoolVerified = true && repository.universityId = "ecnu"',
+      );
+      expect(rows.totalItems, 41);
+      expect(rows.totalPages, 3);
+    },
+  );
+
+  test('community kind and status filters always keep project approval scope', () async {
+    final requests = <http.Request>[];
+    final repo = repository(requests);
+    for (final kind in ['question', 'idea', 'bug', 'update']) {
+      for (final status in ['open', 'closed']) {
+        await repo.communityThreads(kind: kind, status: status);
+        expect(
+          requests.last.url.queryParameters['filter'],
+          'repository.visibility = "public" && repository.reviewState = "approved" && repository.schoolVerified = true && repository.universityId = "ecnu" && kind = "$kind" && status = "$status"',
+        );
+      }
+    }
+  });
+
+  test('community query escapes keywords across thread and project fields', () async {
+    final requests = <http.Request>[];
+    const query = '课程" || repository.reviewState != "approved';
+    await repository(requests).communityThreads(query: '  $query  ');
+    final encoded = jsonEncode(query);
+    expect(
+      requests.single.url.queryParameters['filter'],
+      'repository.visibility = "public" && repository.reviewState = "approved" && repository.schoolVerified = true && repository.universityId = "ecnu" && (title ~ $encoded || body ~ $encoded || repository.name ~ $encoded || repository.topics ~ $encoded)',
+    );
+  });
+
+  test('community starred query combines current school, owner and selection', () async {
+    final requests = <http.Request>[];
+    const query = '校园" || repository.schoolVerified = false';
+    final rows = await repository(requests, universityId: 'other-school')
+        .communityThreads(
+          page: 3,
+          query: ' $query ',
+          kind: 'bug',
+          status: 'closed',
+          starred: true,
+          sort: 'updated',
+        );
+    final params = requests.single.url.queryParameters;
+    final encoded = jsonEncode(query);
+    expect(
+      params['filter'],
+      'repository.visibility = "public" && repository.reviewState = "approved" && repository.schoolVerified = true && repository.universityId = "other-school" && kind = "bug" && status = "closed" && repository.forge_stars_via_repository.owner ?= "member" && (title ~ $encoded || body ~ $encoded || repository.name ~ $encoded || repository.topics ~ $encoded)',
+    );
+    expect(params['page'], '3');
+    expect(params['perPage'], '20');
+    expect(params['sort'], '-updated,id');
+    expect(params['expand'], 'repository');
+    expect(rows.page, 3);
+    expect(rows.totalItems, 41);
+  });
+
+  test(
+    'community ignores blank search without dropping public school scope',
+    () async {
+      final requests = <http.Request>[];
+      await repository(requests).communityThreads(query: '   ');
+      expect(
+        requests.single.url.queryParameters['filter'],
+        'repository.visibility = "public" && repository.reviewState = "approved" && repository.schoolVerified = true && repository.universityId = "ecnu"',
+      );
+    },
+  );
+
+  test(
+    'community selection rejects unlisted kind, status and sorting',
+    () async {
+      final requests = <http.Request>[];
+      final repo = repository(requests);
+      await expectLater(
+        repo.communityThreads(kind: 'all'),
+        throwsArgumentError,
+      );
+      await expectLater(
+        repo.communityThreads(kind: 'bug" || true'),
+        throwsArgumentError,
+      );
+      await expectLater(
+        repo.communityThreads(status: 'pending'),
+        throwsArgumentError,
+      );
+      await expectLater(
+        repo.communityThreads(status: 'open" || true'),
+        throwsArgumentError,
+      );
+      await expectLater(
+        repo.communityThreads(sort: 'name'),
+        throwsArgumentError,
+      );
+      await expectLater(
+        repo.communityThreads(sort: 'created,id'),
+        throwsArgumentError,
+      );
+      expect(requests, isEmpty);
+    },
+  );
+
+  test(
+    'guest community starred selection returns an empty server-sized page',
+    () async {
+      final requests = <http.Request>[];
+      final rows = await repository(
+        requests,
+        signedIn: false,
+      ).communityThreads(starred: true, page: 4);
+      expect(requests, isEmpty);
+      expect(rows.items, isEmpty);
+      expect(rows.page, 4);
+      expect(rows.perPage, 20);
+      expect(rows.totalItems, 0);
+      expect(rows.totalPages, 0);
+    },
+  );
+
+  test('expired community login cannot request starred threads', () async {
+    final requests = <http.Request>[];
+    final repo = repository(requests);
+    repo.client.authStore.save(
+      'expired',
+      RecordModel.fromJson({'id': 'member'}),
+    );
+    final rows = await repo.communityThreads(starred: true);
+    expect(requests, isEmpty);
+    expect(rows.items, isEmpty);
+  });
+
+  test(
+    'guest community starred selection validates filters before returning',
+    () async {
+      final requests = <http.Request>[];
+      final repo = repository(requests, signedIn: false);
+      await expectLater(
+        repo.communityThreads(starred: true, kind: 'all'),
+        throwsArgumentError,
+      );
+      await expectLater(
+        repo.communityThreads(starred: true, status: 'all'),
+        throwsArgumentError,
+      );
+      await expectLater(
+        repo.communityThreads(starred: true, sort: 'created,id'),
         throwsArgumentError,
       );
       expect(requests, isEmpty);

@@ -3,7 +3,7 @@ description: "Campulse - 校园代码共享与项目交流"
 # 私有包，禁止误发布 / private package, never published to pub.dev
 publish_to: 'none'
 
-version: 1.6.2+11
+version: 1.6.3+12
 
 environment:
   sdk: ^3.13.4

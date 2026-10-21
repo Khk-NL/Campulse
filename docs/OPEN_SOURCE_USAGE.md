@@ -16,12 +16,15 @@
 | markdown | [源码](https://github.com/dart-lang/markdown)，BSD-3-Clause | 直接依赖，锁定 7.3.1；用于 Markdown 代码节点识别，保留 Dart project authors 原版权与许可 |
 | GitHubStarsManager | [源码](https://github.com/AmintaCCCP/GithubStarsManager/)，MIT | 参考收藏组织、分类筛选和 GitHub 集成的产品及实现思路；1.6.2 的相关代码由 Campulse 自行实现 |
 | GitHub / Hugging Face Hub | [Issue 筛选](https://docs.github.com/en/issues/tracking-your-work-with-issues/using-issues/filtering-and-searching-issues-and-pull-requests)、[Hub Community](https://huggingface.co/docs/hub/repositories-pull-requests-discussions) | 项目概览、Markdown、议题分类与处理流程的设计参考；取舍见[界面设计](DESIGN.md) |
+| CSDN 社区 / 论坛 | [社区](https://community.csdn.net/)、[论坛](https://bbs.csdn.net/)官方页面，2026-10-21 观察 | 1.6.3 社区交流的频道、时间线、项目/社区来源、全文与回复组织参考；不抓取内容、不引入其源码或新依赖 |
 
 产品参考与源码分发分别记录。当前完整依赖清单以 package.json、锁文件和 Flutter pubspec 为准；本表集中说明主要集成及参考来源。MIT 组件发行物保留版权与许可，copyleft 代码引入按其许可义务处理，第三方标识按各自使用要求处理。
 
-1.6.1 的 Markdown 组件封装界面样式、代码复制和外链处理，渲染及语法解析交给上述两个 BSD 依赖。发行物随 Flutter 依赖许可材料保留其版权、三项条件和免责声明，源码依赖版本以 `apps/mobile/pubspec.lock` 为准。
+2026-10-20 的 1.6.1 加入 Markdown 组件，封装界面样式、代码复制和外链处理，渲染及语法解析交给上述两个 BSD 依赖。发行物随 Flutter 依赖许可材料保留其版权、三项条件和免责声明，源码依赖版本以 `apps/mobile/pubspec.lock` 为准。
 
-1.6.2 的收藏库、GitHub 只读集成与项目分析沿用现有 Flutter、HTTP 客户端和 Node.js 依赖。Campulse 的 Star、整理和分析结果保存在自身数据库；用户选择的 GitHub Stars 按项目导入为个人草稿，GitHub 侧维持只读访问。本轮代码待部署，验证结果正在汇总。
+2026-10-21 的 1.6.2 收藏库、GitHub 只读集成与项目分析已实现并部署，沿用现有 Flutter、HTTP 客户端和 Node.js 依赖。Campulse 的 Star、整理和分析结果保存在自身数据库；用户选择的 GitHub Stars 按项目导入为个人私有草稿，GitHub 侧维持只读访问。真实连接范围和验证结果统一见[验收记录](ACCEPTANCE.md)。
+
+同日开发的 `1.6.3+12` 社区交流在现有项目讨论、回复、Star 与 Markdown 流程内实现，不新增依赖或迁移。CSDN 仅作信息组织与交互参考，Campulse 的帖子继续关联已审核华师大公开项目，不扩展为独立博客平台。
 
 ## EduWork 集成语义
 

@@ -57,7 +57,7 @@ jobs:
           test -n "$CAMPUS_WECHAT_APP_ID" || { echo 'Missing WeChat mobile AppID configuration'; exit 1; }
           VERSION=$(sed -n 's/^version: \([^+]*\).*/\1/p' pubspec.yaml)
           flutter build apk --release --build-number=$((1000 + ${{ github.run_number }})) --dart-define-from-file=config/eduwork.production.example.json --dart-define=CAMPUS_WECHAT_APP_ID="$CAMPUS_WECHAT_APP_ID" --dart-define=CAMPUS_APP_VERSION="$VERSION"
-      - name: Publish preview and maintain release folder
+      - name: Publish APK and source metadata to GitHub Releases
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -70,7 +70,3 @@ jobs:
           printf '{"sourceCommit":"%s","run":"%s","version":"%s","preview":true}\n' "$GITHUB_SHA" "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID" "$VERSION" > release/Campulse-latest.json
           gh release view campulse-preview >/dev/null 2>&1 || gh release create campulse-preview --prerelease --title 'Campulse Android 预览版' --notes 'GitHub Actions 自动构建。预览签名与早期安装包保持一致；邮件与微信能力受审核状态限制。'
           gh release upload campulse-preview release/Campulse-latest.apk release/Campulse-latest.apk.sha256 release/Campulse-latest.json --clobber
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add release/Campulse-latest.apk release/Campulse-latest.apk.sha256 release/Campulse-latest.json
-          git diff --cached --quiet || { git commit -m 'chore: publish Campulse cloud-built APK [skip ci]'; git fetch origin main; git rebase origin/main; git push origin HEAD:main; }

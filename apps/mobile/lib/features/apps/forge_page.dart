@@ -7,6 +7,7 @@ import 'package:campus_mobile/core/pocketbase_session.dart';
 import 'forge_repository.dart';
 import 'forge_markdown.dart';
 import 'forge_library_page.dart';
+import 'forge_community_page.dart';
 import '../shared/widgets/workspace_layout.dart';
 import '../../core/launcher/external_opener.dart';
 
@@ -38,6 +39,40 @@ Future<void> openForgeLibrary(
     ),
   );
 }
+
+Future<void> openForgeCommunity(
+  BuildContext context, {
+  required ForgeRepository repository,
+  VoidCallback? onOpenAccount,
+}) => Navigator.of(context).push<void>(
+  MaterialPageRoute(
+    builder: (_) => ForgeCommunityPage(
+      repository: repository,
+      onOpenAccount: onOpenAccount == null
+          ? null
+          : () {
+              Navigator.of(context).pop();
+              onOpenAccount();
+            },
+      onOpenThread: (thread, project) => Navigator.of(context).push<void>(
+        MaterialPageRoute(
+          builder: (_) => ForgeDiscussionPage(
+            repo: repository,
+            thread: thread,
+            repositoryOwner: project.getStringValue('owner'),
+          ),
+        ),
+      ),
+      onOpenProject: (project) => Navigator.of(context).push<void>(
+        MaterialPageRoute(
+          builder: (_) => ForgeProjectPage(repo: repository, id: project.id),
+        ),
+      ),
+      onCompose: (project, kind) =>
+          _newDiscussion(context, repository, project.id, initialKind: kind),
+    ),
+  ),
+);
 
 class ForgePage extends StatefulWidget {
   const ForgePage({
@@ -305,6 +340,19 @@ class _ForgePageState extends State<ForgePage> {
                             runSpacing: 8,
                             crossAxisAlignment: WrapCrossAlignment.center,
                             children: [
+                              if (!mine)
+                                FilledButton.tonalIcon(
+                                  onPressed: () => openForgeCommunity(
+                                    context,
+                                    repository: repo!,
+                                    onOpenAccount: widget.onOpenAccount,
+                                  ),
+                                  icon: const Icon(
+                                    Icons.forum_outlined,
+                                    size: 18,
+                                  ),
+                                  label: const Text('社区交流'),
+                                ),
                               OutlinedButton.icon(
                                 onPressed: () async {
                                   if (repo!.userId.isEmpty &&
@@ -1601,11 +1649,12 @@ Future<bool> showProjectEditor(
 Future<bool> _newDiscussion(
   BuildContext context,
   ForgeRepository repo,
-  String repository,
-) async {
+  String repository, {
+  String initialKind = 'question',
+}) async {
   final title = TextEditingController();
   final body = TextEditingController();
-  String kind = 'question';
+  String kind = initialKind;
   bool busy = false;
   String? error;
   final result = await showDialog<bool>(

@@ -99,6 +99,64 @@ class ForgeRepository {
         .update(id, body: {'reviewState': 'pending', 'visibility': 'public'});
   }
 
+  Future<ResultList<RecordModel>> communityThreads({
+    int page = 1,
+    String query = '',
+    String? kind,
+    String? status,
+    bool starred = false,
+    String sort = 'created',
+  }) async {
+    if (kind != null &&
+        !const ['question', 'idea', 'bug', 'update'].contains(kind)) {
+      throw ArgumentError.value(kind, 'kind', 'Select a community thread kind');
+    }
+    if (status != null && !const ['open', 'closed'].contains(status)) {
+      throw ArgumentError.value(
+        status,
+        'status',
+        'Select a community thread status',
+      );
+    }
+    final sortField = switch (sort) {
+      'created' => '-created,id',
+      'updated' => '-updated,id',
+      _ => throw ArgumentError.value(
+        sort,
+        'sort',
+        'Select a community thread sort',
+      ),
+    };
+    if (starred && (!client.authStore.isValid || userId.isEmpty)) {
+      return ResultList(page: page, perPage: _pageSize);
+    }
+    return client
+        .collection('forge_discussions')
+        .getList(
+          page: page,
+          perPage: _pageSize,
+          sort: sortField,
+          expand: 'repository',
+          filter: client.filter(
+            [
+              'repository.visibility = "public" && repository.reviewState = "approved" && repository.schoolVerified = true && repository.universityId = {:university}',
+              if (kind != null) 'kind = {:kind}',
+              if (status != null) 'status = {:status}',
+              if (starred)
+                'repository.forge_stars_via_repository.owner ?= {:owner}',
+              if (query.trim().isNotEmpty) '(title ~ {:query} || body ~ {:query} || repository.name ~ {:query} || repository.topics ~ {:query})',
+            ].join(' && '),
+            {
+              'university': universityId,
+              'kind': kind,
+              'status': status,
+              'owner': userId,
+              'query': query.trim(),
+            },
+          ),
+        );
+  }
+
   Future<ResultList<RecordModel>> discussions(
     String repository, {
     int page = 1,
