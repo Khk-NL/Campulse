@@ -4,6 +4,8 @@
 
 ## 已知故障与监控
 
+2026-10-21 云发布收尾：来源 `e266b18` 的 1.6.3 Web 包已核对 SHA256 并增量部署，在线版本读回一致；恢复点 `/opt/campus/backups/web-20261021-155403`。健康、Web 入口、主脚本、运营台四项公网读取返回 200，PocketBase、AI、Caddy、atop 四项服务 active。Android 与 Windows 云包来源相同，原生设备验收继续独立登记。
+
 2026-10-21 项目审核范围复核：运营台审批确认文字明确包含校园相关性，更新 `admin.html` 与 `assets/admin.mjs`，公网读回逐文件一致；原件保存在 `/opt/campus/backups/review-boundary-20261021`。PocketBase、AI、Caddy 均 active。沿用既有数据库权限与网关，公网两账号社区验收 71 项通过；本人全部仓库与公共探索的范围见[项目审核](PROJECT_REVIEW.md)。
 
 2026-10-21 收藏与项目集成：0014 迁移建立个人分类、整理、订阅和版本消息。增量升级先执行隔离网关测试，再停库备份并迁移；最新一致恢复点 `/opt/campus/backups/forge-library-20261021-110626`。项目分析模块随后更新至 `e200256`，对应恢复点 `/opt/campus/backups/forge-analysis-e200256`。实际 GitHub 与学校模型调用结果、云包来源见[验收记录](ACCEPTANCE.md)。

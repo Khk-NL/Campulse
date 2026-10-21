@@ -9,6 +9,13 @@
 - 运营台 HTML 与脚本已增量部署，公网逐文件读回与仓库一致；恢复点 `/opt/campus/backups/review-boundary-20261021`。PocketBase、AI 与 Caddy 三项服务 active。数据库规则、网关与客户端运行逻辑沿用现有版本，产品版本保持 1.6.3。
 - 此次证据为查询测试、公网 API 与静态文件读回；原生设备点击结果继续按下节单独验收。范围和操作步骤见[项目审核](PROJECT_REVIEW.md)。
 
+### 本次云发布收尾
+
+- `e266b1846f13ed54132340179ba21e0db93a455e` 的[工程检查](https://github.com/Khk-NL/Campulse/actions/runs/39542079872)、[Web](https://github.com/Khk-NL/Campulse/actions/runs/39542079767)、[Android](https://github.com/Khk-NL/Campulse/actions/runs/39542079901)及[Windows](https://github.com/Khk-NL/Campulse/actions/runs/39542079704)任务全部成功。三个平台 Release 元数据均读回此来源，产品版本保持 1.6.3。
+- Web ZIP 的 SHA256 为 `5fb71548b8cfd01f1a0bfbced2d3c886478314e971624cc3242ba8113d301250`，与云端校验文件一致。增量部署后，在线 `/app/version.json` 返回 1.6.3 和 `e266b18`；恢复点 `/opt/campus/backups/web-20261021-155403`。
+- 公网健康、Web 入口、主脚本和运营台均返回 HTTP 200，PocketBase、AI、Caddy、atop 四项服务 active。本次部署读回与前轮交互验收分别记录。
+- 当前 MuMu/Nemu 进程为空，5037、7555、16384 端口均无监听；已定位本机 `D:\Android\Sdk\platform-tools\adb.exe`，本轮保持只读检查。原生设备操作验收待模拟器启动后继续。
+
 ## 2026-10-21 项目社区交流，目标 1.6.3
 
 - 参考 CSDN 的频道、信息流和来源项目组织交流，复用现有 `forge_discussions` 与回复。入口为“探索 → 社区交流”，按技术问答、经验与建议、项目动态、问题反馈筛选，支持关键词、收藏项目、时间排序、服务器分页与项目来源跳转。发布时选择已审核项目，再进入既有 Markdown 编辑器。
