@@ -104,10 +104,18 @@ class ForgeLibraryRepository {
   String get _ownerFilter =>
       client.filter('owner = {:owner}', {'owner': owner});
 
-  void _requireMember() {
+  String _requireMember() {
     if (!forge.canWrite || owner.isEmpty) {
       throw StateError('请登录已验证的 Campulse 账号');
     }
+    return owner;
+  }
+
+  void _checkOwner(String expectedOwner) {
+    if (owner != expectedOwner) {
+      throw StateError('登录账号已切换，请重新操作');
+    }
+    _requireMember();
   }
 
   bool _visible(RecordModel project) =>
@@ -220,23 +228,25 @@ class ForgeLibraryRepository {
   }
 
   Future<void> deleteCategory(RecordModel category) async {
-    _requireMember();
-    if (category.getStringValue('owner') != owner) {
+    final operationOwner = _requireMember();
+    if (category.getStringValue('owner') != operationOwner) {
       throw StateError('请管理本人的分类');
     }
     final rows = await client
         .collection('forge_bookmarks')
         .getFullList(
           filter: client.filter('owner = {:owner} && category = {:category}', {
-            'owner': owner,
+            'owner': operationOwner,
             'category': category.id,
           }),
         );
     for (final bookmark in rows) {
+      _checkOwner(operationOwner);
       await client
           .collection('forge_bookmarks')
           .update(bookmark.id, body: {'category': ''});
     }
+    _checkOwner(operationOwner);
     await client.collection('forge_categories').delete(category.id);
   }
 
@@ -246,8 +256,9 @@ class ForgeLibraryRepository {
     List<String>? tags,
     String? note,
   }) async {
-    _requireMember();
+    final operationOwner = _requireMember();
     final current = await _personalRecord('forge_bookmarks', repository);
+    _checkOwner(operationOwner);
     final uniqueTags = <String>[];
     if (tags != null) {
       final seen = <String>{};
@@ -270,15 +281,19 @@ class ForgeLibraryRepository {
     }
     return client
         .collection('forge_bookmarks')
-        .create(body: {...body, 'owner': owner, 'repository': repository});
+        .create(
+          body: {...body, 'owner': operationOwner, 'repository': repository},
+        );
   }
 
   Future<void> moveToCategory(
     Iterable<String> repositories,
     String category,
   ) async {
+    final operationOwner = _requireMember();
     for (final id in repositories.toSet()) {
       await saveBookmark(id, category: category);
+      _checkOwner(operationOwner);
     }
   }
 
@@ -286,8 +301,9 @@ class ForgeLibraryRepository {
     ForgeLibraryEntry entry,
     List<RecordModel> categories,
   ) async {
-    _requireMember();
+    final operationOwner = _requireMember();
     final current = await _personalRecord('forge_bookmarks', entry.id);
+    _checkOwner(operationOwner);
     final analysis = libraryMap(current?.data['analysis'] ?? entry.analysis);
     final currentCategory =
         current?.getStringValue('category') ?? entry.categoryId;
@@ -312,6 +328,7 @@ class ForgeLibraryRepository {
         locked: false,
         position: categories.length,
       );
+      _checkOwner(operationOwner);
       nextCategory = suggested.id;
     }
     final existingTags = libraryStrings(current?.data['tags'] ?? entry.tags);
@@ -326,8 +343,9 @@ class ForgeLibraryRepository {
     String repository, {
     bool includePrereleases = false,
   }) async {
-    _requireMember();
+    final operationOwner = _requireMember();
     final current = await _personalRecord('forge_subscriptions', repository);
+    _checkOwner(operationOwner);
     final body = {'includePrereleases': includePrereleases};
     if (current != null) {
       return client
@@ -336,7 +354,9 @@ class ForgeLibraryRepository {
     }
     return client
         .collection('forge_subscriptions')
-        .create(body: {...body, 'owner': owner, 'repository': repository});
+        .create(
+          body: {...body, 'owner': operationOwner, 'repository': repository},
+        );
   }
 
   Future<void> unsubscribe(RecordModel subscription) async {

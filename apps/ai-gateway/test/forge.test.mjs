@@ -288,6 +288,17 @@ test('native Campulse project analysis uses its own README without a GitHub bind
   assert.equal(input.campusProject.topics, '校园 工具');
   assert.equal(Object.hasOwn(input, 'github'), false);
 });
+
+test('analysis of projects hosted outside GitHub retains the Campulse source', async () => {
+  for (const repositoryUrl of ['https://gitlab.com/campus/project', 'outdated link']) {
+    const { call, state } = fixture({ CHATECNU_API_KEY: 'server-ai-token' });
+    Object.assign(state.db.forge_repositories[0], { repositoryUrl, readme: '作者的使用说明' });
+    const result = await call('analyze', { repositoryId: 'repo1' });
+    assert.equal(result.analysis.source.contentSource, 'campulse');
+    assert.equal(state.requests.length, 1);
+    assert.equal(state.requests[0].url.hostname, 'chat.ecnu.edu.cn');
+  }
+});
 const isoDate = (value) => Number.isFinite(Date.parse(value));
 
 test('DeepSeek uses its current default and EduChat requires an operator-managed endpoint', async () => {

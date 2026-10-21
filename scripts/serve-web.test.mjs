@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { createServer } from 'node:http';
 import { once } from 'node:events';
 import { createWebDevServer } from './serve-web.mjs';
+import { requestLocal as fetch } from '../apps/ai-gateway/test/local-http.mjs';
 
 test('web server redirects, serves only build files and forwards authenticated API requests', async t => {
   let received;

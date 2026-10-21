@@ -25,6 +25,7 @@ Map<String, dynamic> project(
 
 class LibraryBackend {
   final requests = <http.Request>[];
+  void Function(http.Request)? beforeResponse;
   final rows = <String, List<Map<String, dynamic>>>{
     'forge_categories': [],
     'forge_bookmarks': [],
@@ -78,6 +79,7 @@ class LibraryBackend {
         items.removeWhere((row) => row['id'] == path.last);
         return http.Response('', 204);
       }
+      beforeResponse?.call(request);
       return http.Response(
         jsonEncode(body),
         200,
@@ -87,16 +89,18 @@ class LibraryBackend {
   );
 
   ForgeLibraryRepository repository({bool signedIn = true}) {
-    if (signedIn) {
-      final payload = base64Url
-          .encode(utf8.encode(jsonEncode({'exp': 4102444800})))
-          .replaceAll('=', '');
-      client.authStore.save(
-        'e30.$payload.test',
-        RecordModel.fromJson({'id': 'member', 'verified': true}),
-      );
-    }
+    if (signedIn) signIn('member');
     return ForgeLibraryRepository(ForgeRepository(client));
+  }
+
+  void signIn(String owner) {
+    final payload = base64Url
+        .encode(utf8.encode(jsonEncode({'exp': 4102444800, 'id': owner})))
+        .replaceAll('=', '');
+    client.authStore.save(
+      'e30.$payload.test',
+      RecordModel.fromJson({'id': owner, 'verified': true}),
+    );
   }
 
   void star(
@@ -239,6 +243,41 @@ void main() {
     );
   });
 
+  for (final collection in ['forge_bookmarks', 'forge_subscriptions']) {
+    test(
+      'first $collection save stops if the account changes during lookup',
+      () async {
+        final backend = LibraryBackend();
+        final repository = backend.repository();
+        backend.beforeResponse = (request) {
+          if (request.method == 'GET' &&
+              request.url.path.contains(collection)) {
+            backend.signIn('another');
+          }
+        };
+        await expectLater(
+          collection == 'forge_bookmarks'
+              ? repository.saveBookmark('public', note: 'member personal note')
+              : repository.subscribe('public'),
+          throwsA(
+            isA<StateError>().having(
+              (error) => error.message,
+              'message',
+              '登录账号已切换，请重新操作',
+            ),
+          ),
+        );
+        expect(backend.client.authStore.record?.id, 'another');
+        expect(backend.rows[collection], isEmpty);
+        expect(backend.requests.single.method, 'GET');
+        expect(
+          backend.requests.single.url.queryParameters['filter'],
+          'owner = "member" && repository = "public"',
+        );
+      },
+    );
+  }
+
   test('category deletion moves owned bookmarks to unfiled and retains personal content', () async {
     final backend = LibraryBackend();
     backend.rows['forge_categories']!.add({'id': 'tools', 'owner': 'member'});
@@ -280,6 +319,68 @@ void main() {
       isFalse,
     );
   });
+
+  test(
+    'bulk movement stops before the next project after an account switch',
+    () async {
+      final backend = LibraryBackend();
+      final repository = backend.repository();
+      backend.beforeResponse = (request) {
+        if (request.method == 'POST' &&
+            request.url.path.contains('forge_bookmarks')) {
+          backend.signIn('another');
+        }
+      };
+      await expectLater(
+        repository.moveToCategory(['a', 'b'], ''),
+        throwsStateError,
+      );
+      final bookmark = backend.rows['forge_bookmarks']!.single;
+      expect(bookmark['owner'], 'member');
+      expect(bookmark['repository'], 'a');
+      expect(backend.requests.map((request) => request.method), [
+        'GET',
+        'POST',
+      ]);
+    },
+  );
+
+  test(
+    'category deletion stops after an account switch during bookmark updates',
+    () async {
+      final backend = LibraryBackend();
+      final repository = backend.repository();
+      backend.rows['forge_categories']!.add({'id': 'tools', 'owner': 'member'});
+      backend.rows['forge_bookmarks']!.addAll([
+        {
+          'id': 'first',
+          'owner': 'member',
+          'repository': 'a',
+          'category': 'tools',
+        },
+        {
+          'id': 'second',
+          'owner': 'member',
+          'repository': 'b',
+          'category': 'tools',
+        },
+      ]);
+      backend.beforeResponse = (request) {
+        if (request.method == 'PATCH') backend.signIn('another');
+      };
+      await expectLater(
+        repository.deleteCategory(record('tools', {'owner': 'member'})),
+        throwsStateError,
+      );
+      expect(backend.rows['forge_categories'], hasLength(1));
+      expect(backend.rows['forge_bookmarks']!.first['category'], '');
+      expect(backend.rows['forge_bookmarks']!.last['category'], 'tools');
+      expect(backend.requests.map((request) => request.method), [
+        'GET',
+        'PATCH',
+      ]);
+    },
+  );
 
   test('applying AI suggestions preserves locked category and merges personal tags', () async {
     final backend = LibraryBackend();
@@ -339,6 +440,46 @@ void main() {
       isEmpty,
     );
   });
+
+  test(
+    'AI organization stops if the account changes while creating a category',
+    () async {
+      final backend = LibraryBackend();
+      final repository = backend.repository();
+      backend.rows['forge_bookmarks']!.add({
+        'id': 'bookmark',
+        'owner': 'member',
+        'repository': 'public',
+        'category': '',
+        'analysis': {
+          'suggestedCategory': 'Tools',
+          'suggestedTags': ['Dart'],
+        },
+      });
+      backend.beforeResponse = (request) {
+        if (request.method == 'POST' &&
+            request.url.path.contains('forge_categories')) {
+          backend.signIn('another');
+        }
+      };
+      await expectLater(
+        repository.applySuggestions(
+          ForgeLibraryEntry(
+            star: record('star', {}),
+            project: record('public', {}),
+          ),
+          [],
+        ),
+        throwsStateError,
+      );
+      expect(backend.rows['forge_categories']!.single['owner'], 'member');
+      expect(backend.rows['forge_bookmarks']!.single['category'], '');
+      expect(backend.requests.map((request) => request.method), [
+        'GET',
+        'POST',
+      ]);
+    },
+  );
 
   test('subscription preferences, release read state and unsubscribe are owner scoped', () async {
     final backend = LibraryBackend();

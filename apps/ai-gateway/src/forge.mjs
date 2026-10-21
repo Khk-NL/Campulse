@@ -404,8 +404,14 @@ export function createForgeRuntime({ pb, fetcher = fetch, config = {}, busyUsers
         const repositoryId = id(body.repositoryId);
         const row = await project(repositoryId, token, userId);
         const options = path === '/v1/forge/analyze' ? providerOptions(body) : null;
-        const data = path === '/v1/forge/github' || String(row.repositoryUrl || '').trim()
-          ? await metadata(projectGithub(row), githubToken) : null;
+        let githubName;
+        if (path === '/v1/forge/github') githubName = projectGithub(row);
+        else {
+          // GitLab links and native projects still have their own Campulse README.
+          try { githubName = projectGithub(row); }
+          catch (error) { if (error.status !== 400) throw error; }
+        }
+        const data = githubName ? await metadata(githubName, githubToken) : null;
         if (path === '/v1/forge/github') {
           const snapshot = metadataSnapshot(data);
           return { repositoryId, metadata: snapshot,
