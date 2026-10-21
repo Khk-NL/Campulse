@@ -112,6 +112,12 @@ void main() {
     );
   });
 
+  test('all personal repositories use only the current owner scope', () async {
+    final requests = <http.Request>[];
+    await repository(requests).projects(mine: true);
+    expect(requests.single.url.queryParameters['filter'], 'owner = "member"');
+  });
+
   test(
     'guest starred selection returns an empty page without a request',
     () async {

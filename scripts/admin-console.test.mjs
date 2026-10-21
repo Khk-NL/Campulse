@@ -134,6 +134,23 @@ test('project review queues use validated state filters', async () => {
   assert.equal(new URL(requested, 'https://example.com').searchParams.get('filter'), 'reviewState = "pending"');
   await assert.rejects(client.list('forge_repositories', { reviewState: '" || true' }));
 });
+
+test('community listing requires approval while personal repositories include every state', async () => {
+  const urls = [];
+  const client = new AdminClient('', async url => { urls.push(new URL(url, 'https://example.test')); return Response.json({ items: [] }); });
+  await client.list('forge_repositories', { view: 'community' });
+  assert.equal(urls[0].searchParams.get('filter'), 'reviewState = "approved" && schoolVerified = true && universityId = "ecnu" && visibility = "public"');
+  await client.list('forge_repositories', { view: 'repositories', owner: recordId });
+  assert.equal(urls[1].searchParams.get('filter'), `owner = "${recordId}"`);
+});
+
+test('approval confirmation explicitly includes campus relevance', () => {
+  const html = readFileSync(new URL('../deploy/pocketbase/pb_public/admin.html', import.meta.url), 'utf8');
+  const source = readFileSync(new URL('../deploy/pocketbase/pb_public/assets/admin.mjs', import.meta.url), 'utf8');
+  assert.match(html, /id="review-school"[^>]*>已核验华东师范大学归属，确认项目与校园相关，并检查公开内容/);
+  assert.match(source, /if \(approved && !\$\('review-school'\)\.checked\)/);
+  assert.ok(source.includes('请核验华师大归属、确认校园相关性并勾选确认'));
+});
 test('project review checks school material and writes an administrator decision', async () => {
   const calls = [];
   const client = new AdminClient('', async (url, options) => {

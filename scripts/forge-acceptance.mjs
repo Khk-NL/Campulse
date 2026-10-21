@@ -93,6 +93,17 @@ try {
   check('普通用户无法自行审批', (await request('forge_repositories', a.token, { reviewState: 'approved', schoolVerified: true }, 'PATCH', `/records/${repository.id}`)).status !== 200);
   check('待审核项目停止跨用户讨论', (await request('forge_discussions', b.token, { owner: b.id, repository: repository.id, title: '提前讨论', body: '验收', kind: 'question', status: 'open' })).status !== 200);
   const consoleClient = new AdminClient(base); consoleClient.token = adminToken;
+  const personalScope = `owner = "${a.id}" && (id = "${repository.id}" || id = "${second.id}")`;
+  const personal = await good('本人仓库按作者查询全部项目', 'forge_repositories', a.token, undefined, 'GET', `/records?filter=${encodeURIComponent(personalScope)}`);
+  check('本人仓库同时展示待审核与私有草稿', personal.totalItems === 2 && personal.items.some(row => row.id === repository.id && row.reviewState === 'pending') && personal.items.some(row => row.id === second.id && row.visibility === 'private' && row.reviewState === 'draft'));
+  const rejected = await consoleClient.reviewProject(repository.id, false, '请补充校园使用场景及核验材料');
+  check('管理员可按校园相关性退回修改', rejected.reviewState === 'rejected' && rejected.schoolVerified === false);
+  const afterRejection = await good('退回后作者继续查看全部仓库', 'forge_repositories', a.token, undefined, 'GET', `/records?filter=${encodeURIComponent(personalScope)}`);
+  check('退回项目保留在本人仓库', afterRejection.totalItems === 2 && afterRejection.items.some(row => row.id === repository.id && row.reviewState === 'rejected'));
+  for (const token of [null, b.token]) {
+    check('退回项目继续对其他访客隔离', (await request('forge_repositories', token, undefined, 'GET', `/records/${repository.id}`)).status === 404);
+  }
+  await good('作者逐项目重新提交', 'forge_repositories', a.token, { reviewState: 'pending' }, 'PATCH', `/records/${repository.id}`);
   check('运营台管理员审核华师大项目', (await consoleClient.reviewProject(repository.id, true)).reviewState === 'approved');
   const other = await good('审批后读回同用户另一草稿', 'forge_repositories', a.token, undefined, 'GET', `/records/${second.id}`);
   check('逐项目审核互不影响且绑定GitHub', other.reviewState === 'draft' && other.repositoryUrl === 'https://github.com/Khk-NL/Campulse');

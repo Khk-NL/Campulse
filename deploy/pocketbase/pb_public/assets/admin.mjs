@@ -293,7 +293,7 @@ for (const name of ['app','record','delete']) $('cancel-'+name).addEventListener
 $('cancel-review').addEventListener('click', () => $('review-dialog').close());
 $('review-form').addEventListener('submit', event => {
   event.preventDefault(); const approved = event.submitter?.value === 'approve', note = $('review-note').value.trim();
-  if (approved && !$('review-school').checked) { $('review-message').textContent = '请完成华师大归属核验并勾选确认'; return; }
+  if (approved && !$('review-school').checked) { $('review-message').textContent = '请核验华师大归属、确认校园相关性并勾选确认'; return; }
   if (!approved && !note) { $('review-message').textContent = '请填写修改建议'; return; }
   run(async () => {
     try { await client.reviewProject(reviewing, approved, note); $('review-dialog').close(); await refresh(); message(approved ? '项目已审核上架' : '项目已退回修改'); }
