@@ -9,13 +9,15 @@ export PATH=/opt/campus/runtime/node-v22.23.3-linux-x64/bin:$PATH
 test -f "$pocketbase/pb_data/data.db"
 test -f "$source_dir/apps/ai-gateway/src/forge.mjs"
 test -f "$source_dir/deploy/pocketbase/pb_migrations/1790210014_forge_library.js"
-for directory in src test vendor; do test -d "$source_dir/apps/ai-gateway/$directory"; done
+for directory in src test; do
+  test -d "$source_dir/apps/ai-gateway/$directory" || { echo "Missing gateway source directory: $directory" >&2; exit 1; }
+done
 for file in forge.test.mjs server.test.mjs; do test -f "$source_dir/apps/ai-gateway/test/$file"; done
 # This feature adds no npm dependency. A changed lockfile needs its own dependency upgrade.
 cmp "$source_dir/apps/ai-gateway/package-lock.json" "$runtime/package-lock.json"
 for file in server.mjs forge.mjs; do node --check "$source_dir/apps/ai-gateway/src/$file"; done
 stage=$(mktemp -d /opt/campus/forge-check.XXXXXX)
-cp -R "$source_dir/apps/ai-gateway/src" "$source_dir/apps/ai-gateway/test" "$source_dir/apps/ai-gateway/vendor" "$stage/"
+cp -R "$source_dir/apps/ai-gateway/src" "$source_dir/apps/ai-gateway/test" "$stage/"
 cp "$source_dir/apps/ai-gateway/package.json" "$source_dir/apps/ai-gateway/package-lock.json" "$stage/"
 ln -s "$runtime/node_modules" "$stage/node_modules"
 chown -R campus:campus "$stage"
