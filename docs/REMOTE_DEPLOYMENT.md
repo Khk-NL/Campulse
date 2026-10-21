@@ -1,6 +1,8 @@
 # 远程部署
 
-更新：2026-10-15。已有服务器采用增量升级；全新安装与现有生产库分开操作。当前部署证据见[验收记录](ACCEPTANCE.md)。
+更新：2026-10-21。已有服务器采用增量升级；全新安装与现有生产库分开操作。当前部署证据见[验收记录](ACCEPTANCE.md)。
+
+1.6.2 的收藏与项目集成使用 `deploy/update-forge.sh VERIFIED_SOURCE_DIRECTORY`，包括 0014 增量迁移、网关与运营台资源；既有依赖和环境配置保留。脚本先在独立目录运行网关测试，再创建恢复点并应用迁移。个人 GitHub/AI Key 填写及服务端可选配置见[集成指南](FORGE_INTEGRATIONS.md)。
 
 ## 现有环境
 
@@ -28,10 +30,12 @@ Android 与 Windows 云构建共用公开后端配置，Windows 安装与跨端�
 | 微信移动应用 AppID | GitHub Secret CAMPUS_WECHAT_APP_ID | CI 编译参数与 OpenSDK |
 | POCKETBASE_URL | /etc/campus/ai.env，内部 127.0.0.1:8090 | 网关 |
 | CHATECNU_BASE_URL、MODEL、API_KEY | /etc/campus/ai.env | 网关 |
+| DEEPSEEK_BASE_URL、MODEL、API_KEY / EDUCHAT_BASE_URL、MODEL、API_KEY | /etc/campus/ai.env，可选共享服务配置 | 项目集成网关 |
+| 个人 GitHub Token、各模型 Key | 应用“GitHub 与 AI 设置”，当前账号的设备安全存储 | 按次经 HTTPS 发送到项目网关 |
 | SMTP 与发件信息 | PocketBase Mail settings | 服务端发信 |
 | 普通测试/管理员凭据 | 受控本地 .tools 或私有服务器配置 | 验收与维护 |
 
-ChatECNU 默认模型和基址见 `apps/ai-gateway/.env.example`。修改 Key 可使用已有 `deploy/configure-ai.sh`，先检查脚本目标；模型 Key、SMTP Key 和 AppSecret 只保存在服务端。API Key 与服务登录密码分别取得。
+ChatECNU 默认模型和基址见 `apps/ai-gateway/.env.example`。修改共享 Key 可使用已有 `deploy/configure-ai.sh`，先检查脚本目标；共享模型 Key、SMTP Key 和 AppSecret 保存在服务端，个人模型 Key 按账号保存在设备安全存储。API Key 与服务登录密码分别取得。
 
 Brevo SMTP 使用服务商控制台给出的 SMTP Login 和 SMTP Key，并完成发件人/域名认证；现有迁移预设 smtp-relay.brevo.com:465/TLS。最终配置以实际服务商账号为准，验证流程包括测试提交、收件、注册链接和重置链接。
 

@@ -22,6 +22,44 @@ const config = {
   CHATECNU_API_KEY: 'test-only-key',
 };
 
+test('forge routes enforce ordinary account authentication before provider or database requests', async () => {
+  let calls = 0;
+  const base = await serve(config, async (url) => {
+    calls++;
+    assert.ok(url.endsWith('/auth-refresh'));
+    return Response.json({ record: { id: 'user123', verified: false } });
+  });
+  for (const path of ['status', 'github', 'github/stars', 'github/import', 'releases/refresh', 'analyze', 'check']) {
+    const method = path === 'status' ? 'GET' : 'POST';
+    assert.equal((await fetch(`${base}/v1/forge/${path}`, {method})).status, 401);
+    assert.equal((await fetch(`${base}/v1/forge/${path}`, {method, headers: {Authorization: 'Bearer test-user'}})).status, 403);
+  }
+  assert.equal(calls, 7);
+});
+
+test('forge status is wired for verified accounts and keeps server credentials private', async () => {
+  const base = await serve(config, async () => Response.json({record: {id: 'user123', verified: true}}));
+  const response = await fetch(`${base}/v1/forge/status`, {headers: {Authorization: 'Bearer test-user'}});
+  assert.equal(response.status, 200);
+  const data = await response.json();
+  assert.equal(data.providers.chatecnu.configured, true);
+  assert.equal(data.providers.deepseek.model, 'deepseek-flash');
+  assert.equal(data.providers.educhat.endpointConfigured, false);
+  assert.ok(!JSON.stringify(data).includes('test-only-key'));
+});
+
+test('forge model check calls the selected provider through the authenticated server route', async () => {
+  const base = await serve(config, async (url, options) => {
+    if (url.endsWith('/auth-refresh')) return Response.json({record: {id: 'user123', verified: true}});
+    assert.equal(url, 'https://api.deepseek.com/chat/completions');
+    assert.equal(options.headers.Authorization, 'Bearer per-request-fixture');
+    return Response.json({choices: [{message: {content: '{"ok":true}'}, finish_reason: 'stop'}]});
+  });
+  const response = await fetch(`${base}/v1/forge/check`, {method: 'POST', headers: {Authorization: 'Bearer test-user', 'Content-Type': 'application/json'}, body: JSON.stringify({provider: 'deepseek', apiKey: 'per-request-fixture'})});
+  assert.equal(response.status, 200);
+  assert.equal((await response.json()).ok, true);
+});
+
 test('model transport failures return actionable errors without leaking credentials', async () => {
   for (const [name, status, message] of [['TimeoutError',504,'模型响应超时'], ['TypeError',502,'模型连接失败']]) {
     const base = await serve(config, async (url) => {

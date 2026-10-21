@@ -6,8 +6,38 @@ import 'package:campus_mobile/core/pocketbase_session.dart';
 
 import 'forge_repository.dart';
 import 'forge_markdown.dart';
+import 'forge_library_page.dart';
 import '../shared/widgets/workspace_layout.dart';
 import '../../core/launcher/external_opener.dart';
+
+Future<void> openForgeLibrary(
+  BuildContext context, {
+  ForgeRepository? repository,
+  String? initialRepositoryId,
+}) async {
+  final session = PocketBaseSession.instance;
+  final target =
+      repository ?? (session == null ? null : ForgeRepository(session.client));
+  if (target == null || !target.canWrite) {
+    _message(context, '登录并验证邮箱后可管理收藏与订阅');
+    return;
+  }
+  await Navigator.of(context).push<void>(
+    MaterialPageRoute(
+      builder: (_) => ForgeLibraryPage(
+        repository: target,
+        initialRepositoryId: initialRepositoryId,
+        onOpenProject: (id) async {
+          await Navigator.of(context).push<void>(
+            MaterialPageRoute(
+              builder: (_) => ForgeProjectPage(repo: target, id: id),
+            ),
+          );
+        },
+      ),
+    ),
+  );
+}
 
 class ForgePage extends StatefulWidget {
   const ForgePage({
@@ -275,6 +305,30 @@ class _ForgePageState extends State<ForgePage> {
                             runSpacing: 8,
                             crossAxisAlignment: WrapCrossAlignment.center,
                             children: [
+                              OutlinedButton.icon(
+                                onPressed: () async {
+                                  if (repo!.userId.isEmpty &&
+                                      widget.onOpenAccount != null) {
+                                    widget.onOpenAccount!();
+                                    return;
+                                  }
+                                  await openForgeLibrary(
+                                    context,
+                                    repository: repo!,
+                                  );
+                                  if (mounted) {
+                                    setState(() {
+                                      page = 1;
+                                      load();
+                                    });
+                                  }
+                                },
+                                icon: const Icon(
+                                  Icons.bookmarks_outlined,
+                                  size: 18,
+                                ),
+                                label: const Text('收藏与订阅'),
+                              ),
                               if (!mine) ...[
                                 ChoiceChip(
                                   showCheckmark: false,
@@ -955,6 +1009,48 @@ class _ForgeProjectPageState extends State<ForgeProjectPage> {
                                   icon: const Icon(Icons.refresh),
                                   label: const Text('刷新 Star 状态'),
                                 ),
+                              OutlinedButton.icon(
+                                onPressed:
+                                    widget.repo.canWrite &&
+                                        starReady &&
+                                        !starring
+                                    ? () async {
+                                        setState(() => starring = true);
+                                        try {
+                                          if (star == null) {
+                                            await widget.repo.toggleStar(
+                                              widget.id,
+                                            );
+                                          }
+                                          if (context.mounted) {
+                                            await openForgeLibrary(
+                                              context,
+                                              repository: widget.repo,
+                                              initialRepositoryId: widget.id,
+                                            );
+                                          }
+                                        } catch (_) {
+                                          if (context.mounted) {
+                                            _message(
+                                              context,
+                                              '收藏读取失败，请检查连接后重试',
+                                            );
+                                          }
+                                        } finally {
+                                          if (mounted) {
+                                            setState(() {
+                                              starring = false;
+                                              _loadStars();
+                                            });
+                                          }
+                                        }
+                                      }
+                                    : null,
+                                icon: const Icon(Icons.auto_awesome_outlined),
+                                label: Text(
+                                  star == null ? 'Star 并整理' : '整理与 AI 分析',
+                                ),
+                              ),
                               if (owned)
                                 OutlinedButton.icon(
                                   onPressed: () async {

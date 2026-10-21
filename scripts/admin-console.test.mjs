@@ -1,9 +1,70 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { AdminClient, appPayload, ownerFilter, workspaceSummary, workspaceFilter, sections, editableFields, isMultilineField, searchFilter } from '../deploy/pocketbase/pb_public/assets/admin-client.mjs';
+import { AdminClient, appPayload, ownerFilter, workspaceSummary, workspaceFilter, sections, collections, workspaceViews, editableFields, isMultilineField, searchFilter } from '../deploy/pocketbase/pb_public/assets/admin-client.mjs';
 
 const recordId = '0123456789abcde';
+
+for (const [view, collection] of [
+  ['projectCategories', 'forge_categories'],
+  ['projectBookmarks', 'forge_bookmarks'],
+  ['releaseSubscriptions', 'forge_subscriptions'],
+  ['releaseEvents', 'forge_release_events'],
+]) {
+  test(`${view} requires an owner and preserves the private collection filter`, async () => {
+    assert.equal(workspaceViews[view].collection, collection);
+    assert.ok(collections[collection]);
+    assert.equal(workspaceFilter(view, recordId), ownerFilter(recordId));
+    assert.throws(() => workspaceFilter(view));
+    assert.throws(() => workspaceFilter(view, '" || true'));
+    let requested;
+    const client = new AdminClient('', async url => { requested = url; return Response.json({ items: [] }); });
+    await client.list(collection, { view, owner: recordId, page: 2 });
+    const url = new URL(requested, 'https://example.test');
+    assert.equal(url.pathname, `/api/collections/${collection}/records`);
+    assert.equal(url.searchParams.get('filter'), ownerFilter(recordId));
+    assert.equal(url.searchParams.get('page'), '2');
+    assert.equal(url.searchParams.get('expand'), 'owner');
+    await assert.rejects(client.list(collection, { view }));
+  });
+}
+
+test('private library JSON fields remain editable arrays and objects', async () => {
+  const fields = ['tags', 'analysis', 'githubMetadata', 'payload'].map(name => ({ name, type: 'json' }));
+  assert.deepEqual(editableFields({ fields }).map(field => field.name), fields.map(field => field.name));
+  for (const field of fields) assert.equal(isMultilineField(field), true);
+  const writes = [];
+  const client = new AdminClient('', async (url, options) => {
+    const body = JSON.parse(options.body);
+    writes.push({ url, body });
+    return Response.json({ id: recordId, ...body });
+  });
+  const bookmark = { owner: recordId, repository: '123456789abcdef', tags: ['Flutter', '校园工具'], note: '个人备注\n继续整理', analysis: { summary: 'README 摘要', recommendations: ['使用文档'] }, githubMetadata: { language: 'Dart', topics: ['campus'], archived: false } };
+  const saved = await client.saveRecord('forge_bookmarks', bookmark, recordId);
+  assert.deepEqual(writes[0].body, bookmark);
+  assert.deepEqual(saved.tags, bookmark.tags);
+  assert.deepEqual(saved.analysis, bookmark.analysis);
+  assert.deepEqual(saved.githubMetadata, bookmark.githubMetadata);
+  const event = { owner: recordId, repository: '123456789abcdef', subscription: '123456789abcdeg', externalId: 'release-1', payload: { tag: 'v1.0', body: '# 更新\n详细说明', assets: [{ name: 'app.apk', url: 'https://example.test/app.apk' }] }, read: true };
+  const release = await client.saveRecord('forge_release_events', event);
+  assert.deepEqual(writes[1].body, event);
+  assert.deepEqual(release.payload, event.payload);
+  const source = readFileSync(new URL('../deploy/pocketbase/pb_public/assets/admin.mjs', import.meta.url), 'utf8');
+  assert.match(source, /tags: name === 'forge_bookmarks' \? \[\]/);
+  assert.match(source, /JSON\.parse\(input\.value\)/);
+});
+
+test('private library navigation groups distinct actions under campus projects', () => {
+  const source = readFileSync(new URL('../deploy/pocketbase/pb_public/assets/admin.mjs', import.meta.url), 'utf8');
+  assert.match(source, /const library = branch\(forge, '收藏与订阅', false, 'star'\)/);
+  assert.match(source, /\['projectCategories','projectBookmarks','releaseSubscriptions','releaseEvents'\]\) leaf\(library, id\)/);
+  assert.equal(sections.forge_categories.action, '新增项目分类');
+  assert.equal(sections.forge_bookmarks.action, '新增项目收藏');
+  assert.equal(sections.forge_subscriptions.action, '新增版本订阅');
+  assert.equal(sections.forge_release_events.action, '新增版本消息');
+  const html = readFileSync(new URL('../deploy/pocketbase/pb_public/admin.html', import.meta.url), 'utf8');
+  for (const symbol of ['repo', 'star', 'bell']) assert.ok(html.includes(`id="icon-${symbol}"`));
+});
 test('console uses unique IDs and an accessible layered sidebar', () => {
   const html = readFileSync(new URL('../deploy/pocketbase/pb_public/admin.html', import.meta.url), 'utf8');
   const ids = [...html.matchAll(/\bid="([^"]+)"/g)].map(match => match[1]);

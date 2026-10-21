@@ -1,6 +1,6 @@
 # 开源软件使用
 
-更新：2026-10-20。下表区分运行时依赖、随仓库分发的源码和产品参考。新增依赖或复制代码时同步维护来源、版本、版权与许可。
+更新：2026-10-21。下表区分运行时依赖、随仓库分发的源码和产品参考。新增依赖或复制代码时同步维护来源、版本、版权与许可。
 
 | 项目 | 来源与许可 | 使用范围 |
 | --- | --- | --- |
@@ -14,12 +14,14 @@
 | Super Productivity | [源码](https://github.com/super-productivity/super-productivity)，MIT | 参考任务归档/恢复、截止日期、子任务和预计用时 |
 | flutter_markdown_plus | [源码](https://github.com/foresightmobile/flutter_markdown_plus)，BSD-3-Clause | 运行时依赖，锁定 1.0.12；用于项目 README、讨论及编辑预览，保留 Flutter Authors 原版权与许可 |
 | markdown | [源码](https://github.com/dart-lang/markdown)，BSD-3-Clause | 直接依赖，锁定 7.3.1；用于 Markdown 代码节点识别，保留 Dart project authors 原版权与许可 |
-| GitHubStarsManager | [源码](https://github.com/AmintaCCCP/GithubStarsManager/)，MIT | 收藏组织与筛选的产品参考，Campulse 的 Star 仍来自自身数据库 |
+| GitHubStarsManager | [源码](https://github.com/AmintaCCCP/GithubStarsManager/)，MIT | 参考收藏组织、分类筛选和 GitHub 集成的产品及实现思路；1.6.2 的相关代码由 Campulse 自行实现 |
 | GitHub / Hugging Face Hub | [Issue 筛选](https://docs.github.com/en/issues/tracking-your-work-with-issues/using-issues/filtering-and-searching-issues-and-pull-requests)、[Hub Community](https://huggingface.co/docs/hub/repositories-pull-requests-discussions) | 项目概览、Markdown、议题分类与处理流程的设计参考；取舍见[界面设计](DESIGN.md) |
 
 产品参考与源码分发分别记录。当前完整依赖清单以 package.json、锁文件和 Flutter pubspec 为准；本表集中说明主要集成及参考来源。MIT 组件发行物保留版权与许可，copyleft 代码引入按其许可义务处理，第三方标识按各自使用要求处理。
 
 1.6.1 的 Markdown 组件封装界面样式、代码复制和外链处理，渲染及语法解析交给上述两个 BSD 依赖。发行物随 Flutter 依赖许可材料保留其版权、三项条件和免责声明，源码依赖版本以 `apps/mobile/pubspec.lock` 为准。
+
+1.6.2 的收藏库、GitHub 只读集成与项目分析沿用现有 Flutter、HTTP 客户端和 Node.js 依赖。Campulse 的 Star、整理和分析结果保存在自身数据库；用户选择的 GitHub Stars 按项目导入为个人草稿，GitHub 侧维持只读访问。本轮代码待部署，验证结果正在汇总。
 
 ## EduWork 集成语义
 
@@ -27,10 +29,10 @@ Campulse 使用 headless 管线，将导入模块与 PocketBase 鉴权、受保�
 
 EduWork 桌面 Studio 的 DSH 宿主、工作区与进程协议属于独立部署架构。当前 HTTP 接口由 Campulse 网关提供，详见[课程知识工作台](COURSE_NOTEBOOK.md)。
 
-dire.muedu.org/student 用于功能组织参考。Campulse 的课程、笔记和社区数据由自身数据库管理，智能体能力位于课程学习空间内。
+dire.muedu.org/student 用于原课程学习空间的功能组织参考。Campulse 的课程、笔记和社区数据由自身数据库管理，相关学习页面按历史实现保留。
 
 ## 维护要求
 
-本轮工作区和校园广场参考复旦[旦挞](https://github.com/DanXi-Dev/DanXi)、[求是潮手机站](https://www.qsc.zju.edu.cn/mobile)与[航概校园邦](https://github.com/Fewing/buaa_takeaway)的产品组织，交互和数据访问在现有 Campulse 架构内实现。旦挞和校园邦仓库标注 GPL-3.0，后续源码集成按原许可单独评估；本轮登记为设计参考。
+校园广场的产品组织参考复旦[旦挞](https://github.com/DanXi-Dev/DanXi)、[求是潮手机站](https://www.qsc.zju.edu.cn/mobile)与[航概校园邦](https://github.com/Fewing/buaa_takeaway)，交互和数据访问在现有 Campulse 架构内实现。旦挞和校园邦仓库标注 GPL-3.0，后续源码集成按原许可单独评估；当前登记为设计参考。
 
 新增分发源码时记录固定提交、原始许可与本地修改。保留 vendor 目录中的 README 与 LICENSE，升级时核对模块接口并运行对应回归测试。对外展示学校服务与开源来源时使用真实名称及授权范围。

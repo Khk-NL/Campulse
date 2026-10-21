@@ -3,6 +3,7 @@ import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createEmptyCard, fsrs } from 'ts-fsrs';
 import { createNotebookRuntime, eduworkRevision, notebookCapabilities, citedEvidence } from './notebook.mjs';
+import { createForgeRuntime } from './forge.mjs';
 
 const contract = 'campus-eduwork-gateway/v1';
 
@@ -49,13 +50,13 @@ export function createHandler(config, fetcher = fetch) {
   const apiKey = config.CHATECNU_API_KEY || '';
   const busyUsers = new Set();
 
-  async function pb(path, token, { method, body } = {}) {
+  async function pb(path, token, { method, body, signal } = {}) {
     const result = await fetcher(`${pocketBaseUrl}${path}`, {
       method: method || (path.endsWith('/auth-refresh') ? 'POST' : 'GET'),
       headers: { Authorization: token.slice(7), Accept: 'application/json',
         ...(body ? { 'Content-Type': 'application/json' } : {}) },
       ...(body ? { body: JSON.stringify(body) } : {}),
-      signal: AbortSignal.timeout(10000),
+      signal: signal ? AbortSignal.any([signal, AbortSignal.timeout(10000)]) : AbortSignal.timeout(10000),
     });
     if (!result.ok) throw Object.assign(new Error('账号或资料访问失败'), {
       status: [401, 403, 404].includes(result.status) ? result.status : 502,
@@ -129,16 +130,24 @@ export function createHandler(config, fetcher = fetch) {
     return answer;
   }
   const notebook = createNotebookRuntime({ pb, fetcher, pocketBaseUrl, modelCall, busyUsers });
+  const forge = createForgeRuntime({ pb, fetcher, config, busyUsers });
 
   return async (request, response) => {
     try {
       const path = new URL(request.url, 'http://localhost').pathname;
       const reviewMatch = /^\/v1\/cards\/([a-z0-9]{15})\/review$/.exec(path);
-      if (path !== '/v1/status' && path !== '/v1/ask' && !reviewMatch && !notebook.matches(path)) {
+      if (path !== '/v1/status' && path !== '/v1/ask' && !reviewMatch && !notebook.matches(path) && !forge.matches(path)) {
         reply(response, 404, { error: '未找到接口' });
         return;
       }
       const { token, userId } = await authenticate(request);
+      if (forge.matches(path)) {
+        const body = request.method === 'GET'
+          ? Object.fromEntries(new URL(request.url, 'http://localhost').searchParams)
+          : await readJson(request);
+        reply(response, 200, await forge.handle(path, request.method, body, token, userId));
+        return;
+      }
       if (notebook.matches(path)) {
         const body = request.method === 'GET'
           ? Object.fromEntries(new URL(request.url, 'http://localhost').searchParams)
@@ -250,7 +259,11 @@ export function createHandler(config, fetcher = fetch) {
       }
     } catch (error) {
       const status = Number.isInteger(error.status) ? error.status : 502;
-      reply(response, status, { error: error.status ? error.message : '后端暂不可用' });
+      const retryAfter = status === 429 && Number.isInteger(error.retryAfter)
+        ? Math.max(1, Math.min(86400, error.retryAfter)) : null;
+      if (retryAfter) response.setHeader('Retry-After', String(retryAfter));
+      reply(response, status, { error: error.status ? error.message : '后端暂不可用',
+        ...(retryAfter ? { retryAfter } : {}) });
     }
   };
 }

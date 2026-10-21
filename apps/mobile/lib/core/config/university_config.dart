@@ -18,6 +18,7 @@ library;
 
 import 'package:campus_mobile/data/models/period_schedule.dart';
 import 'package:campus_mobile/data/models/term_calendar.dart';
+
 import 'universities/ecnu.dart';
 
 /// 一个高校的静态配置。/ static configuration for one university.
@@ -82,10 +83,10 @@ class UniversityConfig {
   /// The same landing point as [UniversityConfigData.periodSchedule]: Home, the calendar,
   /// reminders and ICS all read times from here, so a change of reading touches one place.
   PeriodSchedule get periodSchedule => EvenPeriodSchedule(
-        firstPeriodStart: firstPeriodStart,
-        periodMinutes: periodMinutes,
-        periodsPerDay: periodsPerDay,
-      );
+    firstPeriodStart: firstPeriodStart,
+    periodMinutes: periodMinutes,
+    periodsPerDay: periodsPerDay,
+  );
 
   /// 学期第一周的周一；**null 表示未核实**。
   ///
@@ -143,7 +144,9 @@ class UniversityConfigs {
   const UniversityConfigs._();
 
   /// 全部已登记配置 / every registered configuration.
-  static const List<UniversityConfig> installed = <UniversityConfig>[ecnuConfig];
+  static const List<UniversityConfig> installed = <UniversityConfig>[
+    ecnuConfig,
+  ];
 
   /// 默认高校——启动时使用的那一所。/ the default university used at startup.
   static UniversityConfig get defaultConfig => installed.first;
@@ -155,4 +158,22 @@ class UniversityConfigs {
     }
     return null;
   }
+}
+
+/// Model-service choices and school-specific help links for project analysis.
+class ProjectAiProviders {
+  const ProjectAiProviders._();
+  static const school = 'chatecnu';
+  static const ids = [school, 'deepseek', 'educhat'];
+  static const labels = {
+    school: 'ChatECNU · 华师大',
+    'deepseek': 'DeepSeek',
+    'educhat': 'EduChat · 自部署兼容服务',
+  };
+  static const schoolHelp = 'EduChat 使用管理员配置的兼容接口地址。ChatECNU 可直接使用学校开放平台 Key。';
+  static const helpUrls = {
+    school: 'https://chat.ecnu.edu.cn/open/',
+    'deepseek': 'https://platform.deepseek.com/',
+    'educhat': 'https://github.com/ECNU-ICALK/EduChat',
+  };
 }

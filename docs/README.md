@@ -1,10 +1,11 @@
 # Campulse 文档
 
-更新：2026-10-19。Campulse 当前聚焦校园代码与项目共享，课表、通知、快速访问和校园广场作为辅助功能。产品介绍见[项目首页](../README.md)，部署和设备状态见[验收记录](ACCEPTANCE.md)。
+更新：2026-10-21。Campulse 当前聚焦校园代码与项目共享，课表、通知、快速访问和校园广场作为辅助功能。产品介绍见[项目首页](../README.md)，部署和设备状态见[验收记录](ACCEPTANCE.md)。
 
 | 读者与用途 | 入口 |
 | --- | --- |
 | 试用与功能操作 | [使用指南](USAGE.md) |
+| 收藏、版本订阅与项目 AI | [集成与 Key 配置](FORGE_INTEGRATIONS.md) |
 | 电脑安装与跨端操作 | [桌面与同步](DESKTOP.md) |
 | 继续开发 | [开发指南](DEVELOPMENT.md)、[交接清单](HANDOFF.md) |
 | 理解模块与数据 | [架构](ARCHITECTURE.md)、[数据模型](DATA_MODEL.md) |

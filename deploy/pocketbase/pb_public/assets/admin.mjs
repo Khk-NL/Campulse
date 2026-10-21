@@ -1,4 +1,4 @@
-import { AdminClient, collections, sections, workspaceViews, editableFields, isMultilineField, workspaceSummary } from './admin-client.mjs?v=20261016-review';
+import { AdminClient, collections, sections, workspaceViews, editableFields, isMultilineField, workspaceSummary } from './admin-client.mjs?v=20261021-library';
 
 const client = new AdminClient(), $ = id => document.getElementById(id);
 const labels = { owner:'用户 ID', courseId:'课程 ID', title:'标题', content:'正文', email:'邮箱', verified:'邮箱已验证', emailVisibility:'邮箱可见', name:'名称', payload:'内容数据', schemaVersion:'数据版本', front:'卡片正面', back:'卡片背面', due:'下次复习', scheduler:'排程数据', reviewHistory:'复习记录', attachment:'附件', kind:'类型', published:'公开发布', demo:'演示标记', universityId:'学校 ID', noteId:'笔记 ID', body:'正文', message:'报名留言', bio:'个人介绍', interests:'兴趣与技能', displayName:'显示名称', campus:'校区', location:'活动地点', tags:'标签', startsAt:'开始时间', status:'状态', post:'所属召集' };
@@ -24,6 +24,8 @@ function setSidebarVisible(visible) {
 const reviewLabel = state => ({ draft: '待提交', pending: '待审核', approved: '已审核', rejected: '待修改' })[state] || '待提交';
 const labelFor = name => collections[name] || name;
 Object.assign(labels, { reviewState: '审核状态', schoolProof: '华师大归属材料', schoolVerified: '学校归属已核验', reviewNote: '审核意见', repository: '项目仓库', discussion: '讨论', visibility: '可见范围' });
+Object.assign(labels, { category: '项目分类', color: '分类颜色', position: '排列顺序', locked: 'AI 整理时保留分类', note: '个人备注', analysis: 'README 分析', analysisAt: '分析时间', githubMetadata: 'GitHub 元数据', includePrereleases: '包含预发布版本', lastCheckedAt: '上次检查时间', subscription: '所属版本订阅', externalId: '外部版本 ID', read: '已读', publishedAt: '版本发布时间' });
+Object.assign(navIcons, { projectCategories: 'repo', projectBookmarks: 'star', releaseSubscriptions: 'bell', releaseEvents: 'bell' });
 let messageTimer;
 function message(text, persistent = false) {
   clearTimeout(messageTimer); $('message').textContent = text;
@@ -97,6 +99,8 @@ function renderCatalog() {
   for (const id of ['repositories','incomingDiscussions','incomingReplies']) leaf(own, id);
   const community = branch(forge, '社区项目仓库', false, 'repo');
   for (const id of ['community','discussions','replies','stars']) leaf(community, id);
+  const library = branch(forge, '收藏与订阅', false, 'star');
+  for (const id of ['projectCategories','projectBookmarks','releaseSubscriptions','releaseEvents']) leaf(library, id);
   leaf(user, 'favorites');
   const square = branch(user, '校园广场', false, 'users');
   for (const id of ['squarePosts', 'squareInterests', 'squareReceivedInterests', 'squareReplies', 'squareProfiles']) leaf(square, id);
@@ -175,7 +179,7 @@ async function openRecord(row = {}) {
     const label = document.createElement('label'); label.textContent = labels[field.name] || field.name;
     if (field.type === 'file' || isMultilineField(field)) label.className = 'wide';
     const view = workspaceViews[activeView];
-    const defaults = { owner: view?.personal ? $('owner').value : '', courseId: $('course-context').value, universityId: 'ecnu', schemaVersion: 1, kind: view?.kind || view?.globalKind || (view?.target ? 'service' : undefined), payload: view?.target ? { name: '', origin: 'official', isOfficial: true, status: 'active', launchTarget: { type: view.target } } : undefined };
+    const defaults = { owner: view?.personal ? $('owner').value : '', courseId: $('course-context').value, universityId: 'ecnu', schemaVersion: 1, kind: view?.kind || view?.globalKind || (view?.target ? 'service' : undefined), tags: name === 'forge_bookmarks' ? [] : undefined, payload: view?.target ? { name: '', origin: 'official', isOfficial: true, status: 'active', launchTarget: { type: view.target } } : undefined };
     const value = record[field.name] ?? defaults[field.name];
     const input = inputFor(field, value, record); label.append(input);
     const hint = document.createElement('small'); hint.className = 'field-help';

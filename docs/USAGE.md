@@ -1,6 +1,6 @@
 # 使用指南
 
-更新：2026-10-19。本指南按 1.6.0 的“探索 / 我的仓库 / 校园 / 我的”组织。安装包与线上版本见[验收记录](ACCEPTANCE.md)。[浏览器工作台](https://campus.allezafrique.cn/app/) · [下载 Android 预览版](https://github.com/Khk-NL/Campulse/releases/tag/campulse-preview)。
+更新：2026-10-21。本指南按“探索 / 我的仓库 / 校园 / 我的”组织。安装包与线上版本见[验收记录](ACCEPTANCE.md)。[浏览器工作台](https://campus.allezafrique.cn/app/) · [下载 Android 预览版](https://github.com/Khk-NL/Campulse/releases/tag/campulse-preview)。
 
 ## 账号与同步
 
@@ -22,6 +22,14 @@
 4. 审核通过后，项目出现在探索与公开搜索中，同学可以关注和参与讨论。
 
 “我的仓库”整理本人全部项目；公开探索展示已获准上架的项目。每个项目单独提交、单独处理，具体流程见[项目审核](PROJECT_REVIEW.md)。Campulse 的讨论和关注保存在自身服务中，GitHub 源码链接打开对应外部仓库。
+
+## 收藏、订阅与 AI 分析
+
+在探索、个人仓库或“我的”打开“收藏与订阅”。我的 Star 支持个人分类、颜色、标签、备注、关键词搜索、排序和批量移动；分类锁定后，应用 AI 建议时保留原分类。项目详情的“整理与 AI 分析”可直接打开当前项目。
+
+版本订阅独立于 Star，关联 GitHub Release。主动检查后，消息写入本人的版本时间线，可标记已读和查看原版说明。填写个人 GitHub Token 后，可分页查看自己的 GitHub Stars，逐项导入 Campulse 私有草稿，再按项目申请公开审核。
+
+“我的 → 设置 → GitHub 与 AI 设置”可选择 ChatECNU、DeepSeek 或管理员部署的 EduChat。保存前可实际测试连接，分析结果包含摘要、用途、上手步骤和分类标签建议。Key 配置、模型选择及完整步骤见[集成指南](FORGE_INTEGRATIONS.md)。
 
 ## 校园辅助
 

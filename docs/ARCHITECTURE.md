@@ -1,20 +1,23 @@
 # 系统架构
 
-更新：2026-10-20。当前主链路为 Flutter Android / Windows / Web → PocketBase，覆盖校园项目、审核、讨论、收藏与校园辅助工具。Node.js AI 网关和旧学习模块保留历史实现，1.6.0 客户端主流程已撤下对应入口。
+更新：2026-10-21。主链路为 Flutter Android / Windows / Web → PocketBase，覆盖校园项目、审核、讨论、收藏与校园辅助工具。1.6.2 复用 Node.js 网关接入 GitHub 和项目分析；旧学习页面按存量实现保留。
+
+1.6.2 的客户端、网关与新增集合代码待部署，测试结果正在汇总。发布状态以[验收记录](ACCEPTANCE.md)为准。
 
 主导航为探索、我的仓库、校园、我的。前两页分别使用 `ForgePage` 的公开项目和个人仓库查询；`CampusPage` 收拢课程/课表、快速访问、校园广场。导航和子标签按首次访问装配，已访问页面保留状态；全局搜索聚焦项目查询。课程卡片、课表和旧目录搜索复用的课程详情只显示基础信息。新建草稿保存后进入个人仓库，公开展示仍走逐项目审核。
 
-Web 使用 `/app/` 子路径，当前业务通过同源 `/api/` 连接 PocketBase，`/ai/` 保留存量学习服务。`config/web.json` 选择浏览器 origin，本机代理与线上静态站点可复用同一 bundle。历史 PDF 模块的原生文件访问通过条件导入隔离，Web 实现读取已登录用户的 PocketBase 附件仓库。微信原生注册限定在 Android。构建、调试及发布见[Web 说明](WEB.md)。
+Web 使用 `/app/` 子路径，业务通过同源 `/api/` 连接 PocketBase，项目集成通过 `/ai/v1/forge/*` 请求网关。`config/web.json` 选择浏览器 origin，本机代理与线上静态站点可复用同一 bundle。历史 PDF 模块的原生文件访问通过条件导入隔离，Web 实现读取已登录用户的 PocketBase 附件仓库。微信原生注册限定在 Android。构建、调试及发布见[Web 说明](WEB.md)。
 
 ## 运行路径
 
 ```text
 Flutter Android / Windows / Web（共享 Dart 业务层）
  ├─ PocketBase HTTPS API → 账号、项目、审核、讨论、收藏、课程与校园广场
+ ├─ /ai/v1/forge/* → 项目集成网关 → GitHub / 模型服务
  └─ CampusLauncher → 外部网页 / 微信 OpenSDK
 
 Caddy（现有共享服务器的 80/443）
- ├─ /ai/* → 127.0.0.1:8787（存量学习网关，去掉 /ai 前缀）
+ ├─ /ai/* → 127.0.0.1:8787（项目集成与存量学习网关，去掉 /ai 前缀）
  └─ 其他路径 → 127.0.0.1:8090
                   ├─ PocketBase API 与受保护附件
                   └─ pb_public：官网、运营台、/app/ 浏览器工作台
@@ -31,10 +34,13 @@ Caddy（现有共享服务器的 80/443）
 | 校园工具 | `features/campus/campus_page.dart`、`features/study/course_hub_page.dart`、`features/timetable/` | 课程基础信息、课表、CSV 与校园通知；另含公共快速访问和广场 |
 | 项目社区 | `apps/mobile/lib/features/apps/forge_page.dart`、`forge_repository.dart` | 我的仓库、逐项目审核、发现、Star、排序和讨论组合筛选 |
 | 项目内容阅读 | `features/apps/forge_markdown.dart` | 复用 Markdown 渲染依赖，统一 README、讨论、回复及编辑预览，封装代码复制与外链打开 |
+| 个人收藏库 | `features/apps/forge_library_page.dart`、`forge_library_repository.dart` | 分类、标签、备注、批量整理、个人分析和版本消息 |
+| 集成设置与请求 | `features/apps/forge_integrations.dart` | 按账号保存本机 Key 与模型选择，使用当前会话调用项目集成网关 |
+| 项目集成网关 | `apps/ai-gateway/src/forge.mjs` | GitHub 元数据与 Stars 读取、逐项导入、订阅刷新和 README 分析 |
 | 校园广场 | `apps/mobile/lib/features/community/` | 竞赛/运动/学习/扩列召集、报名、讨论与自愿公开名片 |
 | 自适应工作区 | `features/shared/widgets/workspace_layout.dart`、`features/shell/app_shell.dart` | 桌面侧栏、紧凑底栏、响应式网格与键盘导航 |
 | Windows 运行与发布 | `apps/mobile/windows/`、`.github/workflows/windows-release.yml` | 原生窗口、品牌图标、锁定依赖构建和 ZIP Release |
-| 历史学习实现 | `features/study/` 其余学习页面、`apps/ai-gateway/` | 原笔记、AI 与复习实现，当前主导航和课程详情已断开入口 |
+| 历史学习实现 | `features/study/` 其余学习页面、网关 notebook 管线 | 原笔记、AI 与复习实现，当前主导航和课程详情已断开入口 |
 | 官网与运营台 | `deploy/pocketbase/pb_public/` | 产品页面、分层管理界面、元数据驱动记录维护 |
 | 数据结构与访问规则 | `experiments/pocketbase/pb_migrations/`、`deploy/pocketbase/pb_migrations/` | 基础集合与生产增量迁移 |
 | 高校适配 | `adapters/ecnu/`、客户端高校配置 | 校方接口契约和学校信息 |
@@ -46,11 +52,23 @@ Caddy（现有共享服务器的 80/443）
 
 1.6.1 的 Star 与排序在 `ForgeRepository.projects` 组合后交给服务器分页；Star 使用 `forge_stars_via_repository.owner` 反向关系限定本人，公开视图继续叠加同校、已审核和公开条件。讨论查询同时保留项目 ID、类型、处理状态和标题/正文关键词。筛选控件位于异步列表之外，读取中仍可继续输入；查询条件变化回到第一页，新建内容后重置旧筛选。
 
-Markdown 原文保持现有字段，组件以 `flutter_markdown_plus` 和 `markdown` 渲染。标题、列表、表格、代码块在客户端呈现，代码和表格各自横向滚动。编辑预览读取同一个控制器，保存原文；网页链接复用系统打开工具，相关协议和相对地址有明确反馈。本轮沿用现有集合和网关。
+Markdown 原文保持现有字段，组件以 `flutter_markdown_plus` 和 `markdown` 渲染。标题、列表、表格、代码块在客户端呈现，代码和表格各自横向滚动。编辑预览读取同一个控制器，保存原文；网页链接复用系统打开工具，相关协议和相对地址有明确反馈。
+
+## 项目收藏与集成（1.6.2）
+
+`ForgeLibraryPage` 通过 `ForgeLibraryRepository` 读取本人 Star、分类、收藏整理、订阅与历史版本事件。Star 决定收藏库展示的项目，`forge_bookmarks` 单独保存分类、标签、备注和分析；取消 Star 后这些整理内容继续保留，再次 Star 时按同一项目读回。分类锁定用于应用 AI 建议时保留原分类，手工整理仍可修改。
+
+GitHub 功能经过 `/v1/forge/github`、`github/stars` 与 `github/import` 读取仓库资料和个人 Stars，用户逐项选择导入。新项目保存为本人的 `private/draft`，公开上架仍由管理员逐项审核。GitHub 侧使用只读请求，Campulse 的 Star 与 GitHub Star 分别维护。
+
+订阅刷新由用户触发 `/v1/forge/releases/refresh`，版本事件按用户、项目和外部版本 ID 去重。进入页面读取 PocketBase 已保存的事件；刷新结果写入事件和订阅检查时间，已读状态同步到账号。
+
+`/v1/forge/analyze` 根据项目 README 生成摘要、使用场景、入门步骤、风险与分类标签建议，结果存入当前用户的 bookmark。用户确认后应用个人分类和标签，公共项目内容保持原值。网关继续使用已验证的 PocketBase 会话校验归属。
+
+`ForgeIntegrationStore` 沿用 `FlutterSecureStorage`，以 PocketBase origin 和用户 ID 划分本机设置，保存 GitHub Token、各模型提供方的 Key 与模型名称。数据库保存整理结果和元数据，服务器默认 Key 由环境变量提供。模型请求支持 ChatECNU、DeepSeek（默认 `deepseek-flash`）；EduChat 使用管理员配置的兼容 `/chat/completions` 服务地址，模型宿主单独部署。
 
 ## 数据与权限
 
-公共快速访问由管理员维护，收藏属于用户。个人课程按 owner 组织。社区项目持有作者关系，讨论、回复和关注继承项目可见范围。存量笔记、卡片和成果继续按 owner 及 courseId 管理，旧计划和学习过程保存在用户工作台快照。集合映射见[数据模型](DATA_MODEL.md)。
+公共快速访问由管理员维护，收藏属于用户。个人课程按 owner 组织。社区项目持有作者关系，讨论、回复和关注继承项目可见范围。1.6.2 新增的分类、书签、订阅和版本事件按 owner 隔离，相关项目须为本人项目或已审核的华师大公开项目。存量笔记、卡片和成果继续按 owner 及 courseId 管理，旧计划和学习过程保存在用户工作台快照。集合映射见[数据模型](DATA_MODEL.md)。
 
 普通用户使用 PocketBase 会话，登录态持久化到设备安全存储，启动尝试刷新；网络超时保留已有会话。存量学习网关通过服务端 auth-refresh 校验已验证账号，使用请求者令牌读取资料，再检查用户与课程归属。
 
@@ -63,6 +81,7 @@ Markdown 原文保持现有字段，组件以 `flutter_markdown_plus` 和 `markd
 | 搜课程、置顶和查看详情 | `course_hub_page.dart`、`course_details_sheet.dart` | 个人课程按 owner 读取；置顶使用 `user_favorites` 的 `courses` 分组，详情显示基础信息 |
 | 查服务、收藏和打开入口 | `apps_page.dart`、CampusLauncher | 管理员公共目录，收藏按用户保存；网页由系统浏览器打开 |
 | 项目发布、审核、讨论和 Star | Forge 页面与 Repository | 私有草稿 → 逐项审核 → 公共发现；讨论继承项目可见范围 |
+| 整理收藏、查看更新与项目分析 | `ForgeLibraryPage`、Library Repository、Forge Gateway | 个人分类与书签独立保存；GitHub 读取和模型分析结果归当前用户 |
 | 发起召集、报名和讨论 | `community_page.dart`、`community_repository.dart` | `community_posts/interests/replies`；发起人和报名者可读报名留言 |
 | 查看“我报名的” | 对报名集合按 owner 分页，展开 `post` 关系 | 每页 20 条，学校/类型/校区/搜索在服务端关联过滤，保留分页总数 |
 | 编辑兴趣名片 | 用户主动公开，按 owner 查找后新增或更新 | 唯一 owner 索引；并发创建时重新查找本人记录再更新 |

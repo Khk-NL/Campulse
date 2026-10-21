@@ -20,6 +20,7 @@ import 'theme_color_settings.dart';
 import 'package:campus_mobile/features/shared/widgets/workspace_layout.dart';
 import 'package:campus_mobile/features/apps/apps_page.dart';
 import 'package:campus_mobile/features/apps/forge_page.dart';
+import 'package:campus_mobile/features/apps/forge_integrations.dart';
 import 'package:campus_mobile/features/shell/shell_routes.dart';
 
 import 'package:flutter/material.dart';
@@ -223,6 +224,15 @@ class _ProfilePageState extends State<ProfilePage> {
               icon: Icons.notifications_outlined,
               color: scheme.secondary,
               onTap: () => openNotificationCenter(context),
+            ),
+            WorkspaceAction(
+              title: english ? 'Stars & subscriptions' : '收藏与订阅',
+              subtitle: english
+                  ? 'Categories, releases & project insights'
+                  : '分类整理 · 版本更新 · 项目分析',
+              icon: Icons.star_outline,
+              color: scheme.tertiary,
+              onTap: () => openForgeLibrary(context),
             ),
             WorkspaceAction(
               title: english ? 'Saved services' : '收藏的入口',
@@ -641,6 +651,14 @@ class _ProfilePageState extends State<ProfilePage> {
           ThemeColorSettings(state: state),
           const SizedBox(height: 12),
           _dataSourceBlock(context, l10n, state),
+          const SizedBox(height: 12),
+          ListTile(
+            leading: const Icon(Icons.api_outlined),
+            title: const Text('GitHub 与 AI 设置'),
+            subtitle: const Text('个人 Token · ChatECNU · DeepSeek · EduChat'),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => showForgeIntegrationSettings(context),
+          ),
         ],
       ),
     );

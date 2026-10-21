@@ -1,18 +1,16 @@
 # 数据模型与归属
 
-更新：2026-10-15。现网业务数据库为 PocketBase（内置 SQLite）。集合结构由基础迁移与生产迁移共同定义；Prisma schema 属于旧 API 实现。
+更新：2026-10-21。现网业务数据库为 PocketBase（内置 SQLite）。集合结构由基础迁移与生产迁移共同定义；Prisma schema 属于旧 API 实现。1.6.2 新增收藏库迁移待部署，测试结果正在汇总。
 
 ## 业务层级
 
 ```text
 用户
- ├─ 学习
- │   ├─ 课程 → 笔记 / PDF、复习卡片、学习成果
- │   ├─ 课程表（同一批课程的时间视图）
- │   └─ 计划、学习过程、个人通知与待办
  ├─ 校园 GitHub
  │   ├─ 个人仓库 → 收到的讨论与回复
- │   └─ 社区项目 → 参与的讨论与回复、Star
+ │   ├─ 社区项目 → 参与的讨论与回复、Star
+ │   └─ 收藏与订阅 → 分类、标签、备注、项目分析、版本事件
+ ├─ 校园工具 → 个人课程 / 课表 / 通知与待办
  ├─ 校园广场 → 个人召集 / 报名意向 / 活动讨论 / 兴趣名片
  └─ 收藏 → 引用公共服务或入口
 
@@ -20,6 +18,8 @@
  ├─ 官方小程序与官网
  └─ 校园公告与活动
 ```
+
+原课程笔记、PDF、复习卡片、学习成果与计划继续保存在历史学习集合，客户端主入口以项目社区和校园辅助工具为主。
 
 ## PocketBase 集合
 
@@ -45,6 +45,10 @@
 | `forge_discussions` | 项目问题、建议和讨论状态 | 发言者 + repository，访问继承项目 |
 | `forge_replies` | 讨论回复 | 发言者 + discussion，访问继承项目 |
 | `forge_stars` | 项目关注 | owner + repository 唯一 |
+| `forge_categories` | 分类名称、颜色、排序和 AI 整理锁定状态 | owner 私有 |
+| `forge_bookmarks` | 项目分类、标签、备注、README 分析、分析时间及 GitHub 元数据 | owner + repository 唯一；category 可空且属于本人 |
+| `forge_subscriptions` | 项目版本订阅、预发布选项与上次检查时间 | owner + repository 唯一 |
+| `forge_release_events` | 外部版本 ID、版本内容、发布时间与已读状态 | owner + repository + externalId 唯一；subscription 属于本人且指向同一项目 |
 
 具体字段、索引和级联行为以迁移代码为准。运营台分层视图复用这些关系，同一记录可从用户或项目上下文查看。
 
@@ -54,6 +58,16 @@
 
 服务目录中的 demo 标记属于服务端记录属性，管理员可以维护。生产客户端已移除离线演示数据替代，连接失败显示网络状态与重试入口。测试账号、可管理测试记录继续保留。
 
+## 项目收藏与订阅
+
+`1790210014_forge_library.js` 新建上表的四个收藏库集合。普通用户写入使用已验证账号，owner 固定为本人；读取和修改书签、订阅、事件时，关联项目须为本人所有，或满足华师大、已审核、学校归属已核验和公开四项条件。owner、repository 和事件的 subscription 在更新时固定。运营台位于用户工作区的“校园 GitHub → 收藏与订阅”，沿用用户筛选和 schema 动态编辑。
+
+Star 和书签分别保存：`forge_stars` 负责关注关系及公开计数，`forge_bookmarks` 负责个人整理。取消 Star 保留书签，重新 Star 后恢复同一份整理结果。删除分类会清空书签的 category；删除订阅级联删除对应事件，书签继续保留。
+
+分类名称上限 80 字符，颜色采用 `#RRGGBB`，position 为整数。locked 控制 AI 建议是否保留现有分类，手工修改照常。书签 tags 按字符串数组使用，JSON 字节上限 8 KiB；note 上限 4000 字符，analysis 上限 48 KiB，githubMetadata 上限 32 KiB。事件 externalId 上限 100 字符，payload 上限 96 KiB。Key 保存在本机账号分区，集合只保存资料与处理结果。
+
+GitHub Stars 逐项导入为用户自己的私有草稿，继续使用原项目审核流程。AI 分析写入个人 bookmark；确认应用后更新本人分类和标签。版本事件由手动刷新读取 GitHub 后写入，进入页面读取已保存事件，read 字段记录个人已读状态。
+
 ## 计划、笔记与学习成果
 
 计划使用 `study_workspaces.payload.activities`，完成时间 completedAt 控制待办/归档，恢复时清空。优先级、标签、子任务、预计用时保留在任务内。快照同步仍存在多设备后写覆盖，逐条版本冲突合并列入后续。
@@ -62,7 +76,7 @@
 
 ## 迁移顺序
 
-全新库先执行 `experiments/pocketbase/pb_migrations/` 的四个基础迁移，再执行 `deploy/pocketbase/pb_migrations/` 的生产迁移。后者当前为 1790210000 至 1790210012，共 13 个文件。
+全新库先执行 `experiments/pocketbase/pb_migrations/` 的四个基础迁移，再执行 `deploy/pocketbase/pb_migrations/` 的生产迁移。仓库中的后者为 1790210000 至 1790210014，共 15 个文件；1.6.2 新增的 1790210014 处于待部署状态。
 
 现有生产库备份后按增量部署手册升级，保持已执行迁移内容固定。结构检查与真实数据库执行分别验证。
 
