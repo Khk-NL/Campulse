@@ -77,6 +77,9 @@ done
 systemctl start campus-ai
 systemctl is-active campus-pocketbase campus-ai
 curl --fail --silent --show-error --max-time 15 http://127.0.0.1:8090/api/health
-curl --fail --silent --show-error --retry 5 --retry-connrefused --retry-delay 1 --max-time 15 http://127.0.0.1:8787/v1/status > /dev/null
+# This endpoint intentionally requires a user session; 401 confirms the new route is listening.
+gateway_status=$(curl --silent --show-error --retry 5 --retry-connrefused --retry-delay 1 --max-time 15 \
+  --output /dev/null --write-out '%{http_code}' http://127.0.0.1:8787/v1/forge/status)
+test "$gateway_status" = 401
 trap - EXIT
 printf '\nProject library deployed. Recovery point: %s\n' "$backup"
