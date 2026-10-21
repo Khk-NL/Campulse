@@ -259,6 +259,7 @@ test('analysis validates JSON, records provenance and keeps manual bookmark fiel
   const request = state.requests.find(({ url }) => url.hostname === 'chat.ecnu.edu.cn');
   assert.equal(request.url.href, 'https://chat.ecnu.edu.cn/open/api/v1/chat/completions');
   assert.equal(request.options.headers.Authorization, 'Bearer personal-ai-token');
+  assert.deepEqual(JSON.parse(request.options.body).thinking, { type: 'disabled' });
   assert.match(JSON.parse(request.options.body).messages[1].content, /README/);
   const input = JSON.parse(JSON.parse(request.options.body).messages[1].content);
   assert.equal(input.campusProject.readme, '作者补充的校园部署方法');
@@ -309,7 +310,7 @@ test('DeepSeek uses its current default and EduChat requires an operator-managed
   const body = JSON.parse(request.options.body);
   assert.deepEqual(body.thinking, { type: 'disabled' });
   assert.deepEqual(body.response_format, { type: 'json_object' });
-  assert.equal(body.max_tokens, 3500);
+  assert.equal(body.max_tokens, 1800);
   await rejects(call('analyze', { repositoryId: 'repo1', provider: 'educhat', apiKey: 'personal' }), 503);
   const local = fixture({ EDUCHAT_BASE_URL: 'http://localhost:9000/v1', EDUCHAT_MODEL: 'educhat-local' });
   const result = await local.call('analyze', { repositoryId: 'repo1', provider: 'educhat' });
